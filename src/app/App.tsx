@@ -5,8 +5,9 @@ import { AudioPlayer } from './components/organisms/AudioPlayer';
 import { TourStopsList } from './components/organisms/TourStopsList';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
 import { DesignSystem } from './screens/DesignSystem';
+import { LoginScreen } from './screens/LoginScreen';
 
-type Screen = 'splash' | 'player' | 'design-system';
+type Screen = 'splash' | 'player' | 'design-system' | 'login';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
@@ -52,6 +53,13 @@ export default function App() {
         )}
 
         {currentScreen === 'design-system' && <DesignSystem />}
+
+        {currentScreen === 'login' && (
+          <LoginScreen
+            onLogin={() => setCurrentScreen('splash')}
+            onSignUp={() => {}}
+          />
+        )}
 
         {showDownloadModal && (
           <DownloadModal
@@ -105,6 +113,16 @@ export default function App() {
           }`}
         >
           Design
+        </button>
+        <button
+          onClick={() => setCurrentScreen('login')}
+          className={`px-4 py-2 rounded-lg text-xs shadow-lg transition-colors ${
+            currentScreen === 'login'
+              ? 'bg-[var(--terracotta)] text-white'
+              : 'bg-white text-[var(--dark-charcoal)] border border-[var(--border)]'
+          }`}
+        >
+          Login
         </button>
       </div>
     </div>
