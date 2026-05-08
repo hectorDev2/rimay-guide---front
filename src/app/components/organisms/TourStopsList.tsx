@@ -1,30 +1,20 @@
 import { Check, Play } from 'lucide-react';
 
-interface TourStop {
+export interface TourStop {
   id: number;
   name: string;
   duration: string;
   status: 'completed' | 'current' | 'future';
+  audioSrc: string;
 }
 
 interface TourStopsListProps {
+  stops: TourStop[];
   onClose: () => void;
   onSelectStop: (id: number) => void;
 }
 
-const stops: TourStop[] = [
-  { id: 1, name: 'Entrada Principal', duration: '4 min', status: 'completed' },
-  { id: 2, name: 'Murallas Ciclópeas', duration: '7 min', status: 'completed' },
-  { id: 3, name: 'Plaza del Inca', duration: '6 min', status: 'current' },
-  { id: 4, name: 'La Gran Plaza', duration: '5 min', status: 'future' },
-  { id: 5, name: 'Torre del Sol', duration: '8 min', status: 'future' },
-  { id: 6, name: 'Sector de Rodaderos', duration: '4 min', status: 'future' },
-  { id: 7, name: 'Cámara Ceremonial', duration: '6 min', status: 'future' },
-  { id: 8, name: 'Piedra de los Doce Ángulos', duration: '3 min', status: 'future' },
-  { id: 9, name: 'Mirador del Valle', duration: '2 min', status: 'future' },
-];
-
-export function TourStopsList({ onClose, onSelectStop }: TourStopsListProps) {
+export function TourStopsList({ stops, onClose, onSelectStop }: TourStopsListProps) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={onClose}>
       <div
@@ -32,10 +22,10 @@ export function TourStopsList({ onClose, onSelectStop }: TourStopsListProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-12 h-1.5 bg-[var(--stone-gray)] rounded-full"></div>
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
 
-        <div className="px-6 py-4 border-b border-[var(--stone-gray)]">
+        <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-xl mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
             Sacsayhuamán
           </h3>
@@ -47,22 +37,24 @@ export function TourStopsList({ onClose, onSelectStop }: TourStopsListProps) {
             <div key={stop.id} className="relative">
               <button
                 onClick={() => onSelectStop(stop.id)}
-                className={`w-full px-6 py-4 flex items-center gap-4 hover:bg-[var(--stone-gray)]/30 transition-colors ${
-                  stop.status === 'current' ? 'bg-[var(--terracotta)]/5' : ''
+                className={`w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-100 transition-all duration-200 ${
+                  stop.status === 'current' ? 'bg-[#1a365d]/10' : ''
+                } ${
+                  stop.status === 'future' ? 'opacity-60 hover:opacity-100' : ''
                 }`}
               >
                 {stop.status === 'current' && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--terracotta)]"></div>
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#1a365d]"></div>
                 )}
 
                 <div className="relative flex-shrink-0">
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center ${
                       stop.status === 'completed'
-                        ? 'bg-[var(--inca-gold)] text-white'
+                        ? 'bg-[#1a365d]/80 text-white'
                         : stop.status === 'current'
-                        ? 'bg-[var(--terracotta)] text-white'
-                        : 'bg-[var(--stone-gray)] text-[var(--muted-foreground)]'
+                        ? 'bg-[#1a365d] text-white'
+                        : 'bg-gray-200 text-gray-500'
                     }`}
                   >
                     {stop.status === 'completed' ? (
@@ -81,7 +73,7 @@ export function TourStopsList({ onClose, onSelectStop }: TourStopsListProps) {
                       height="16"
                     >
                       <pattern id={`dots-${stop.id}`} x="0" y="0" width="2" height="4" patternUnits="userSpaceOnUse">
-                        <circle cx="1" cy="2" r="1" fill="var(--stone-gray)" />
+                        <circle cx="1" cy="2" r="1" fill="#D1D5DB" />
                       </pattern>
                       <rect width="2" height="16" fill={`url(#dots-${stop.id})`} />
                     </svg>
@@ -89,15 +81,21 @@ export function TourStopsList({ onClose, onSelectStop }: TourStopsListProps) {
                 </div>
 
                 <div className="flex-1 text-left">
-                  <h4 className={`mb-0.5 ${stop.status === 'current' ? 'font-semibold' : ''}`}>
+                  <h4 className={`mb-0.5 transition-colors ${
+                    stop.status === 'current' ? 'font-semibold text-[#1a365d]' : ''
+                  } ${
+                    stop.status === 'completed' ? 'text-gray-500' : 'text-gray-800'
+                  }`}>
                     {stop.name}
                   </h4>
-                  <p className="text-sm text-[var(--muted-foreground)]">{stop.duration}</p>
+                  <p className={`text-sm transition-colors ${
+                    stop.status === 'completed' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>{stop.duration}</p>
                 </div>
 
                 {stop.status === 'current' && (
-                  <div className="flex items-center gap-1 text-[var(--terracotta)]">
-                    <div className="w-2 h-2 bg-[var(--terracotta)] rounded-full animate-pulse"></div>
+                  <div className="flex items-center gap-1 text-[#1a365d]">
+                    <div className="w-2 h-2 bg-[#1a365d] rounded-full animate-pulse"></div>
                     <span className="text-xs">Reproduciendo</span>
                   </div>
                 )}
@@ -106,7 +104,7 @@ export function TourStopsList({ onClose, onSelectStop }: TourStopsListProps) {
           ))}
         </div>
 
-        <div className="p-4 bg-[var(--stone-gray)]/30">
+        <div className="p-4 bg-gray-200/50">
           <div className="h-12 flex items-center justify-center opacity-20">
             <svg width="100" height="20" viewBox="0 0 100 20">
               <pattern id="textile" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
