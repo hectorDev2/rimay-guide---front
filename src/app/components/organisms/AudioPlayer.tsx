@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle, ArrowLeft } from 'lucide-react';
 import { TourStop } from './TourStopsList';
 
 interface AudioPlayerProps {
@@ -8,10 +8,11 @@ interface AudioPlayerProps {
   onNext: () => void;
   onPrev: () => void;
   nextStopName?: string;
+  onBack?: () => void;
 }
 
-export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopName }: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(true);
+export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopName, onBack }: AudioPlayerProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -115,6 +116,16 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
       <div className="relative h-full flex flex-col p-6">
         <div className="flex justify-between items-start mb-auto">
           <div>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="mb-3 text-white/70 hover:text-white transition-colors flex items-center gap-1"
+                aria-label="Volver"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="text-sm">Volver</span>
+              </button>
+            )}
             <h2 className="text-3xl text-white mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
               {stop.name}
             </h2>

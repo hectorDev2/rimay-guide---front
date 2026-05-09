@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
+import { useAuthStore } from '@/stores/authStore';
 
 interface LoginScreenProps {
   onLogin?: () => void;
@@ -11,9 +12,22 @@ interface LoginScreenProps {
 export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const login = useAuthStore((s) => s.login);
+  const socialLogin = useAuthStore((s) => s.socialLogin);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
+  const clearError = useAuthStore((s) => s.clearError);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+    await login(email, password);
+    onLogin?.();
+  };
+
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    clearError();
+    await socialLogin(provider);
     onLogin?.();
   };
 
@@ -25,22 +39,30 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
           alt="Sacsayhuamán - Cusco"
           className="w-full h-full object-cover opacity-60"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end">
         <div className="bg-white rounded-t-3xl p-8 mt-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl text-gray-800 mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1
+              className="text-3xl text-[var(--dark-charcoal)] mb-2"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
               Bienvenido
             </h1>
-            <p className="text-gray-500 text-base">Escuchá el Cusco como lo cuenta su gente</p>
+            <p className="text-[var(--muted-foreground)] text-base">
+              Escuchá el Cusco como lo cuenta su gente
+            </p>
           </div>
 
+          {/* Social Buttons */}
           <div className="flex gap-4 mb-6">
             <button
               type="button"
-              className="flex-1 h-12 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+              onClick={() => handleSocialLogin('google')}
+              disabled={isLoading}
+              className="flex-1 h-12 flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--warm-white)] transition-colors disabled:opacity-50"
               aria-label="Iniciar sesión con Google"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -52,7 +74,9 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
             </button>
             <button
               type="button"
-              className="flex-1 h-12 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+              onClick={() => handleSocialLogin('apple')}
+              disabled={isLoading}
+              className="flex-1 h-12 flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--warm-white)] transition-colors disabled:opacity-50"
               aria-label="Iniciar sesión con Apple"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -62,14 +86,20 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
           </div>
 
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-sm text-gray-400">o</span>
-            <div className="flex-1 h-px bg-gray-200" />
+            <div className="flex-1 h-px bg-[var(--border)]" />
+            <span className="text-sm text-[var(--muted-foreground)]">o</span>
+            <div className="flex-1 h-px bg-[var(--border)]" />
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm text-center">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="text-sm font-medium text-[var(--dark-charcoal)]">
                 Correo electrónico
               </label>
               <Input
@@ -77,14 +107,14 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl border-gray-300 bg-white px-4 text-base focus:border-[#1a365d] focus:ring-[#1a365d]/20"
+                className="h-12 rounded-xl border-[var(--border)] bg-white px-4 text-base focus:border-[var(--terracotta)] focus:ring-[var(--terracotta)]/20"
                 placeholder="tu@email.com"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="text-sm font-medium text-[var(--dark-charcoal)]">
                 Contraseña
               </label>
               <Input
@@ -92,7 +122,7 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 rounded-xl border-gray-300 bg-white px-4 text-base focus:border-[#1a365d] focus:ring-[#1a365d]/20"
+                className="h-12 rounded-xl border-[var(--border)] bg-white px-4 text-base focus:border-[var(--terracotta)] focus:ring-[var(--terracotta)]/20"
                 placeholder=""
                 required
               />
@@ -100,15 +130,16 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
 
             <Button
               type="submit"
-              className="w-full h-12 rounded-2xl bg-[#1a365d] hover:bg-[#1a365d]/90 text-white text-base font-medium mt-6 shadow-lg shadow-[#1a365d]/30"
+              disabled={isLoading}
+              className="w-full h-12 rounded-2xl bg-[var(--terracotta)] hover:bg-[#8B4513] text-white text-base font-medium mt-6 shadow-lg shadow-[var(--terracotta)]/30 disabled:opacity-50"
             >
-              Continuar
+              {isLoading ? 'Ingresando...' : 'Continuar'}
             </Button>
           </form>
 
-          <p className="text-center mt-8 text-base text-gray-500">
+          <p className="text-center mt-8 text-base text-[var(--muted-foreground)]">
             ¿No tenés cuenta?{' '}
-            <button type="button" onClick={onSignUp} className="text-[#1a365d] font-medium hover:underline">
+            <button type="button" onClick={onSignUp} className="text-[var(--terracotta)] font-medium hover:underline">
               Registrate
             </button>
           </p>

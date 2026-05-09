@@ -6,6 +6,8 @@ export interface TourStop {
   duration: string;
   status: 'completed' | 'current' | 'future';
   audioSrc: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface TourStopsListProps {
