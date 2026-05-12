@@ -7,8 +7,12 @@ import { TourStopsList, type TourStop } from './components/organisms/TourStopsLi
 import { LocationModal } from './components/organisms/LocationModal';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
+import { ChatButton } from './components/organisms/ChatButton';
+import { ChatPanel } from './components/organisms/ChatPanel';
+import { Sheet, SheetContent } from './components/ui/sheet';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
+import { useChatStore } from '@/stores/chatStore';
 
 const INITIAL_STOPS: TourStop[] = [
   { id: 1, name: 'Murallas Ciclópeas', duration: '4:00', status: 'completed', audioSrc: '/audio/placeholder.mp3', latitude: -13.5078, longitude: -71.9815 },
@@ -210,6 +214,9 @@ function LoginRoute() {
 }
 
 export default function App() {
+  const isChatOpen = useChatStore((s) => s.isOpen);
+  const closeChat = useChatStore((s) => s.closeChat);
+
   return (
     <div className="size-full relative">
       <div className="h-full w-full max-w-md mx-auto relative bg-white shadow-2xl overflow-hidden">
@@ -219,6 +226,14 @@ export default function App() {
           <Route path="/player" element={<PlayerRoute />} />
           <Route path="/tour/:slug" element={<TourRoute />} />
         </Routes>
+
+        <ChatButton />
+
+        <Sheet open={isChatOpen} onOpenChange={(open) => { if (!open) closeChat(); }}>
+          <SheetContent side="right" className="w-full sm:max-w-md p-0 border-none rounded-l-2xl">
+            <ChatPanel onClose={closeChat} />
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
