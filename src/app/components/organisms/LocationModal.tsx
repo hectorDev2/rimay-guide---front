@@ -1,132 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap,
-  Circle,
-} from 'react-leaflet';
-import L from 'leaflet';
-import { MapPin, Navigation, Radio } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
+import { Navigation, Radio, MapPin } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useLocationStore } from '@/stores/locationStore';
+import { useMapStore } from '@/stores/mapStore';
+import { POIS } from '@/lib/map/pois';
 import type { TourStop } from './TourStopsList';
+
+const TourMap = lazy(() => import('./TourMap').then((m) => ({ default: m.TourMap })));
 
 interface LocationModalProps {
   stops: TourStop[];
   onClose: () => void;
-}
-
-function StopMarkers({ stops }: { stops: TourStop[] }) {
-  return (
-    <>
-      {stops.map((stop) => {
-        const isCurrent = stop.status === 'current';
-        const isCompleted = stop.status === 'completed';
-
-        return (
-          <Marker
-            key={stop.id}
-            position={[stop.latitude, stop.longitude]}
-            icon={L.divIcon({
-              className: 'custom-marker',
-              html: `<div style="
-                width: ${isCurrent ? '32px' : '24px'};
-                height: ${isCurrent ? '32px' : '24px'};
-                border-radius: 50%;
-                background: ${isCurrent ? '#A0522D' : isCompleted ? '#6B8F71' : '#999'};
-                border: 3px solid white;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 10px;
-                color: white;
-                font-weight: 600;
-              ">${isCompleted ? '✓' : stop.id}</div>`,
-              iconSize: [isCurrent ? 32 : 24, isCurrent ? 32 : 24],
-              iconAnchor: [isCurrent ? 16 : 12, isCurrent ? 16 : 12],
-              popupAnchor: [0, isCurrent ? -18 : -14],
-            })}
-          >
-            <Popup>
-              <div className="min-w-[140px]">
-                <p className="font-semibold text-sm">{stop.name}</p>
-                <p className="text-xs text-gray-500">
-                  {stop.status === 'completed'
-                    ? '✓ Completado'
-                    : stop.status === 'current'
-                      ? '▶ Reproduciendo'
-                      : 'Próxima parada'}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">{stop.duration}</p>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-    </>
-  );
-}
-
-function UserLocationMarker() {
-  const position = useLocationStore((s) => s.position);
-
-  if (!position) return null;
-
-  return (
-    <>
-      <Marker
-        position={[position.latitude, position.longitude]}
-        icon={L.divIcon({
-          className: 'user-marker',
-          html: `<div style="
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #4285F4;
-            border: 3px solid white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-          "></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
-        })}
-      >
-        <Popup>
-          <p className="text-xs font-medium">Tu ubicación</p>
-          <p className="text-xs text-gray-500">±{Math.round(position.accuracy)}m</p>
-        </Popup>
-      </Marker>
-      <Circle
-        center={[position.latitude, position.longitude]}
-        radius={position.accuracy}
-        pathOptions={{
-          color: '#4285F4',
-          fillColor: '#4285F4',
-          fillOpacity: 0.1,
-          weight: 1,
-        }}
-      />
-    </>
-  );
-}
-
-function MapCenterUpdater() {
-  const position = useLocationStore((s) => s.position);
-  const map = useMap();
-  const hasFlown = useRef(false);
-
-  useEffect(() => {
-    if (position && !hasFlown.current) {
-      map.flyTo([position.latitude, position.longitude], 17, {
-        duration: 1.5,
-      });
-      hasFlown.current = true;
-    }
-  }, [position, map]);
-
-  return null;
 }
 
 export function LocationModal({ stops, onClose }: LocationModalProps) {
@@ -136,13 +20,10 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
 
   const position = useLocationStore((s) => s.position);
   const geoError = useLocationStore((s) => s.error);
-
-  const tourCenter = useMemo(() => {
-    if (stops.length === 0) return { lat: -13.5075, lng: -71.9815 };
-    const avgLat = stops.reduce((a, s) => a + s.latitude, 0) / stops.length;
-    const avgLng = stops.reduce((a, s) => a + s.longitude, 0) / stops.length;
-    return { lat: avgLat, lng: avgLng };
-  }, [stops]);
+  const activePoi = useMapStore((s) => s.activePoi);
+  const showPopup = useMapStore((s) => s.showPopup);
+  const setShowPopup = useMapStore((s) => s.setShowPopup);
+  const setActivePoi = useMapStore((s) => s.setActivePoi);
 
   const handleEnableGeo = () => {
     setGeoEnabled(true);
@@ -177,19 +58,9 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
 
         {/* Map */}
         <div className="flex-1 min-h-0 relative">
-            <MapContainer
-              center={[tourCenter.lat, tourCenter.lng]}
-              zoom={16}
-              className="w-full h-full"
-            >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <StopMarkers stops={stops} />
-            {geoEnabled && <UserLocationMarker />}
-            {userStartedGeo && <MapCenterUpdater />}
-          </MapContainer>
+          <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-gray-100"><p className="text-sm text-gray-400">Cargando mapa...</p></div>}>
+            <TourMap className="w-full h-full" />
+          </Suspense>
 
           {/* GPS enable banner */}
           {!geoEnabled && (
@@ -213,37 +84,106 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
               </div>
             </div>
           )}
+
+          {/* Active POI popup close button (overlay, not Mapbox popup) */}
+          {activePoi && showPopup && (
+            <div className="absolute top-4 left-4 right-4 z-[1000]">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-100">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--dark-charcoal)]">
+                      🏛️ {activePoi.name}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      {activePoi.description}
+                    </p>
+                    <span className="inline-block mt-2 text-[10px] uppercase tracking-wide text-gray-400 font-medium">
+                      {activePoi.category === 'tour_stop' ? 'Parada del tour' : activePoi.category}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => { setActivePoi(null); setShowPopup(false); }}
+                    className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Stops legend */}
+        {/* Stops + POIs legend */}
         <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 overflow-y-auto max-h-[30vh]">
           <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
-            Paradas ({stops.length})
+            Paradas del tour ({stops.length})
           </h4>
           <div className="space-y-2">
-            {stops.map((stop) => (
-              <div key={stop.id} className="flex items-center gap-3 text-sm">
-                <div
-                  className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                    stop.status === 'current'
-                      ? 'bg-[var(--terracotta)]'
-                      : stop.status === 'completed'
-                        ? 'bg-[var(--sage-green)]'
-                        : 'bg-gray-300'
+            {stops.map((stop) => {
+              const poi = POIS.find((p) => p.tourStopId === stop.id);
+              const isActive = activePoi?.id === poi?.id;
+              return (
+                <button
+                  key={stop.id}
+                  onClick={() => {
+                    if (poi) {
+                      useMapStore.getState().setActivePoi(poi);
+                      useMapStore.getState().setShowPopup(true);
+                    }
+                  }}
+                  className={`w-full flex items-center gap-3 text-sm text-left transition-colors ${
+                    isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100'
                   }`}
-                />
-                <span
-                  className={
-                    stop.status === 'completed'
-                      ? 'text-gray-400 line-through'
-                      : 'text-[var(--dark-charcoal)]'
-                  }
                 >
-                  {stop.name}
-                </span>
-                <span className="text-xs text-gray-400 ml-auto">{stop.duration}</span>
-              </div>
-            ))}
+                  <div
+                    className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                      stop.status === 'current'
+                        ? 'bg-[var(--terracotta)] ring-2 ring-[var(--terracotta)]/30'
+                        : stop.status === 'completed'
+                          ? 'bg-[var(--sage-green)]'
+                          : 'bg-gray-300'
+                    }`}
+                  />
+                  <span
+                    className={
+                      stop.status === 'completed'
+                        ? 'text-gray-400 line-through'
+                        : 'text-[var(--dark-charcoal)]'
+                    }
+                  >
+                    {stop.name}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-auto">{stop.duration}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mt-4 mb-3">
+            Puntos de interés
+          </h4>
+          <div className="space-y-2">
+            {POIS.filter((p) => p.category !== 'tour_stop').map((poi) => {
+              const isActive = activePoi?.id === poi.id;
+              return (
+                <button
+                  key={poi.id}
+                  onClick={() => {
+                    useMapStore.getState().flyToPoi(poi);
+                  }}
+                  className={`w-full flex items-center gap-3 text-sm text-left transition-colors ${
+                    isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-white"
+                    style={{ backgroundColor: poi.color }}
+                  />
+                  <span className="text-[var(--dark-charcoal)]">{poi.name}</span>
+                  <span className="text-xs text-gray-400 ml-auto capitalize">{poi.category}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
