@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams } from 'react-router';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
@@ -7,24 +7,11 @@ import { TourStopsList, type TourStop } from './components/organisms/TourStopsLi
 import { LocationModal } from './components/organisms/LocationModal';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
-import { ChatButton } from './components/organisms/ChatButton';
-import { ChatPanel } from './components/organisms/ChatPanel';
-import { Sheet, SheetContent } from './components/ui/sheet';
+import { DebugLocationPanel } from './components/organisms/DebugLocationPanel';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
-import { useChatStore } from '@/stores/chatStore';
-
-const INITIAL_STOPS: TourStop[] = [
-  { id: 1, name: 'Murallas Ciclópeas', duration: '4:00', status: 'completed', audioSrc: '/audio/placeholder.mp3', latitude: -13.5078, longitude: -71.9815 },
-  { id: 2, name: 'Torreón de Muyucmarca', duration: '6:00', status: 'completed', audioSrc: '/audio/placeholder.mp3', latitude: -13.5085, longitude: -71.9820 },
-  { id: 3, name: 'Sacsayhuamán — Fortaleza del Sol', duration: '5:30', status: 'current', audioSrc: '/voices/sacsayhuaman_es.mp3', latitude: -13.5075, longitude: -71.9825 },
-  { id: 4, name: 'Plaza del Inca', duration: '5:00', status: 'future', audioSrc: '/audio/placeholder.mp3', latitude: -13.5068, longitude: -71.9830 },
-  { id: 5, name: 'Templo de la Luna', duration: '7:00', status: 'future', audioSrc: '/audio/placeholder.mp3', latitude: -13.5060, longitude: -71.9820 },
-  { id: 6, name: 'Túneles Subterráneos', duration: '8:00', status: 'future', audioSrc: '/audio/placeholder.mp3', latitude: -13.5065, longitude: -71.9805 },
-  { id: 7, name: 'Mirador Panorámico', duration: '4:30', status: 'future', audioSrc: '/audio/placeholder.mp3', latitude: -13.5070, longitude: -71.9795 },
-  { id: 8, name: 'Roca Sagrada', duration: '3:00', status: 'future', audioSrc: '/audio/placeholder.mp3', latitude: -13.5075, longitude: -71.9790 },
-  { id: 9, name: 'Altar Ceremonial', duration: '5:00', status: 'future', audioSrc: '/audio/placeholder.mp3', latitude: -13.5080, longitude: -71.9800 },
-];
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { INITIAL_STOPS } from '@/services/tourData';
 
 function getCurrentStop(stops: TourStop[]): TourStop {
   return stops.find((s) => s.status === 'current') ?? stops[0];
@@ -158,8 +145,24 @@ function PlayerRoute() {
   const stopId = Number(searchParams.get('stopId')) || INITIAL_STOPS[2].id;
   const t = useTourStops();
   const [showStopsList, setShowStopsList] = useState(false);
+  const [geoEnabled, setGeoEnabled] = useState(false);
+  const autoNavRef = useRef(false);
 
   const currentStop = t.stops.find((s) => s.id === stopId) ?? t.currentStop;
+
+  useEffect(() => {
+    setGeoEnabled(true);
+  }, []);
+
+  useGeolocation({
+    enabled: geoEnabled,
+    stops: t.stops,
+    onEnterStop: (detectedStopId) => {
+      if (detectedStopId !== stopId) {
+        t.handleSelectStop(detectedStopId);
+      }
+    },
+  });
 
   if (!isAuthenticated) {
     return <Navigate to={`/login?redirect=/player?stopId=${stopId}`} replace />;
@@ -186,6 +189,8 @@ function PlayerRoute() {
           }}
         />
       )}
+
+      <DebugLocationPanel stops={t.stops} onEnterStop={t.handleSelectStop} currentStopId={currentStop.id} />
     </>
   );
 }
@@ -214,9 +219,6 @@ function LoginRoute() {
 }
 
 export default function App() {
-  const isChatOpen = useChatStore((s) => s.isOpen);
-  const closeChat = useChatStore((s) => s.closeChat);
-
   return (
     <div className="size-full relative">
       <div className="h-full w-full max-w-md mx-auto relative bg-white shadow-2xl overflow-hidden">
@@ -226,14 +228,6 @@ export default function App() {
           <Route path="/player" element={<PlayerRoute />} />
           <Route path="/tour/:slug" element={<TourRoute />} />
         </Routes>
-
-        <ChatButton />
-
-        <Sheet open={isChatOpen} onOpenChange={(open) => { if (!open) closeChat(); }}>
-          <SheetContent side="right" className="w-full sm:max-w-md p-0 border-none rounded-l-2xl">
-            <ChatPanel onClose={closeChat} />
-          </SheetContent>
-        </Sheet>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ interface LocationModalProps {
 export function LocationModal({ stops, onClose }: LocationModalProps) {
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [userStartedGeo, setUserStartedGeo] = useState(false);
-  useGeolocation({ enabled: geoEnabled });
+  useGeolocation({ enabled: geoEnabled, stops });
 
   const position = useLocationStore((s) => s.position);
   const geoError = useLocationStore((s) => s.error);

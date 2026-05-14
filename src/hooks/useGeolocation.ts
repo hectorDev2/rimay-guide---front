@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocationStore } from '@/stores/locationStore';
-import { useTourStore, type TourStop } from '@/stores/tourStore';
+import type { TourStop } from '@/app/components/organisms/TourStopsList';
 
 function calculateDistance(
   lat1: number,
@@ -23,45 +23,43 @@ function findNearestStopInRange(
   lat: number,
   lon: number,
   stops: TourStop[],
-): string | null {
-  let nearest: { id: string; distance: number } | null = null;
+): TourStop | null {
+  let nearest: { stop: TourStop; distance: number } | null = null;
 
   for (const stop of stops) {
-    if (stop.isCompleted) continue;
+    if (stop.status === 'completed') continue;
     const distance = calculateDistance(lat, lon, stop.latitude, stop.longitude);
-    if (distance <= stop.radiusMeters) {
+    if (distance <= 25) {
       if (!nearest || distance < nearest.distance) {
-        nearest = { id: stop.id, distance };
+        nearest = { stop, distance };
       }
     }
   }
 
-  return nearest?.id ?? null;
+  return nearest?.stop ?? null;
 }
 
 interface UseGeolocationOptions {
   enabled?: boolean;
   highAccuracy?: boolean;
   interval?: number;
+  stops?: TourStop[];
+  onEnterStop?: (stopId: number) => void;
 }
 
 export function useGeolocation(options: UseGeolocationOptions = {}) {
-  const { enabled = false, highAccuracy = true, interval = 5000 } = options;
+  const { enabled = false, highAccuracy = true, interval = 5000, stops = [], onEnterStop } = options;
   const watchIdRef = useRef<number | null>(null);
-  const stopsRef = useRef<TourStop[]>([]);
-  const tourRef = useRef(useTourStore.getState().tour);
+  const stopsRef = useRef<TourStop[]>(stops);
+  const onEnterStopRef = useRef(onEnterStop);
+  const lastActiveRef = useRef<number | null>(null);
 
-  useTourStore((s) => {
-    stopsRef.current = s.tour?.stops ?? [];
-    tourRef.current = s.tour;
-    return null;
-  });
+  stopsRef.current = stops;
+  onEnterStopRef.current = onEnterStop;
 
   const setPosition = useLocationStore((s) => s.setPosition);
   const setError = useLocationStore((s) => s.setError);
-  const setWatching = useLocationStore((s) => s.setWatching);
   const setActiveStop = useLocationStore((s) => s.setActiveStop);
-  const setCurrentStopIndex = useTourStore((s) => s.setCurrentStopIndex);
 
   useEffect(() => {
     if (!enabled || !('geolocation' in navigator)) {
@@ -76,7 +74,6 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
     const handleSuccess = (pos: GeolocationPosition) => {
       const now = Date.now();
       const currentStops = stopsRef.current;
-      const currentTour = tourRef.current;
 
       const position = {
         latitude: pos.coords.latitude,
@@ -89,18 +86,22 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
 
       if (currentStops.length > 0 && now - lastCheck >= interval) {
         lastCheck = now;
-        const nearestId = findNearestStopInRange(
+        const nearest = findNearestStopInRange(
           position.latitude,
           position.longitude,
           currentStops,
         );
-        setActiveStop(nearestId);
 
-        if (nearestId && currentTour) {
-          const index = currentTour.stops.findIndex((s) => s.id === nearestId);
-          if (index !== -1) {
-            setCurrentStopIndex(index);
+        if (nearest) {
+          setActiveStop(String(nearest.id));
+
+          if (nearest.id !== lastActiveRef.current) {
+            lastActiveRef.current = nearest.id;
+            onEnterStopRef.current?.(nearest.id);
           }
+        } else {
+          setActiveStop(null);
+          lastActiveRef.current = null;
         }
       }
     };
@@ -114,7 +115,6 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
       setError(messages[err.code] ?? 'Error desconocido de geolocalización');
     };
 
-    setWatching(true);
     watchIdRef.current = navigator.geolocation.watchPosition(
       handleSuccess,
       handleError,
@@ -130,8 +130,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
-      setWatching(false);
-      setActiveStop(null);
+      lastActiveRef.current = null;
     };
-  }, [enabled, highAccuracy, interval, setPosition, setError, setWatching, setActiveStop, setCurrentStopIndex]);
+  }, [enabled, highAccuracy, interval, setPosition, setError, setActiveStop]);
 }
