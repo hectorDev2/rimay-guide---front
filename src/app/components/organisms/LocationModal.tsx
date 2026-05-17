@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from 'react';
-import { Navigation, Radio, MapPin, Crosshair } from 'lucide-react';
+import { Navigation, Radio, MapPin, Box, Crosshair } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useLocationStore } from '@/stores/locationStore';
 import { useMapStore } from '@/stores/mapStore';
 import { POIS } from '@/lib/map/pois';
-import type { TourStop } from './TourStopsList';
+import { SiteViewer3D } from './SiteViewer3D';
+import type { TourStopDisplay } from './TourStopsList';
 
 const TourMap = lazy(() => import('./TourMap').then((m) => ({ default: m.TourMap })));
 
@@ -15,7 +16,7 @@ const SIMULATED_POSITION = {
 };
 
 interface LocationModalProps {
-  stops: TourStop[];
+  stops: TourStopDisplay[];
   onClose: () => void;
 }
 
@@ -31,6 +32,8 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
   const showPopup = useMapStore((s) => s.showPopup);
   const setShowPopup = useMapStore((s) => s.setShowPopup);
   const setActivePoi = useMapStore((s) => s.setActivePoi);
+  const show3DViewer = useMapStore((s) => s.show3DViewer);
+  const setShow3DViewer = useMapStore((s) => s.setShow3DViewer);
 
   const handleEnableGeo = () => {
     setGeoEnabled(true);
@@ -148,17 +151,32 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                       {activePoi.category === 'tour_stop' ? 'Parada del tour' : activePoi.category}
                     </span>
                   </div>
-                  <button
-                    onClick={() => { setActivePoi(null); setShowPopup(false); }}
-                    className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setShow3DViewer(true)}
+                      className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--terracotta)]/10 hover:bg-[var(--terracotta)]/20 flex items-center justify-center text-[var(--terracotta)] transition-colors"
+                      title="Ver en 3D"
+                    >
+                      <Box className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => { setActivePoi(null); setShowPopup(false); }}
+                      className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
+
+        <SiteViewer3D
+          poi={activePoi}
+          open={show3DViewer}
+          onClose={() => setShow3DViewer(false)}
+        />
 
         {/* Stops + POIs legend */}
         <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 overflow-y-auto max-h-[30vh]">

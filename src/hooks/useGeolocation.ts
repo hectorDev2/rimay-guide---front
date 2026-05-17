@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocationStore } from '@/stores/locationStore';
-import type { TourStop } from '@/app/components/organisms/TourStopsList';
+import { useTourStore } from '@/stores/tourStore';
+import type { TourStop } from '@/lib/tour/types';
 
 function calculateDistance(
   lat1: number,
