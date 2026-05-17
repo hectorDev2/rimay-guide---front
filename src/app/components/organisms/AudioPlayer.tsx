@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle, ArrowLeft } from 'lucide-react';
-import { TourStop } from './TourStopsList';
+import type { TourStopDisplay } from './TourStopsList';
 
 interface AudioPlayerProps {
-  stop: TourStop;
+  stop: TourStopDisplay;
   onShowStopsList: () => void;
   onNext: () => void;
   onPrev: () => void;

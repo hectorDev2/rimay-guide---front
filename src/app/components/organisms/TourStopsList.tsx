@@ -1,7 +1,7 @@
 import { Check, Play } from 'lucide-react';
 
-export interface TourStop {
-  id: number;
+export interface TourStopDisplay {
+  id: string;
   name: string;
   duration: string;
   status: 'completed' | 'current' | 'future';
@@ -11,9 +11,9 @@ export interface TourStop {
 }
 
 interface TourStopsListProps {
-  stops: TourStop[];
+  stops: TourStopDisplay[];
   onClose: () => void;
-  onSelectStop: (id: number) => void;
+  onSelectStop: (id: string) => void;
 }
 
 export function TourStopsList({ stops, onClose, onSelectStop }: TourStopsListProps) {

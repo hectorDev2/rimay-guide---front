@@ -1,29 +1,10 @@
 import { create } from 'zustand';
-
-export interface TourStop {
-  id: string;
-  order: number;
-  name: string;
-  latitude: number;
-  longitude: number;
-  radiusMeters: number;
-  audioSrc: string;
-  durationSeconds: number;
-  isCompleted: boolean;
-}
-
-interface Tour {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  totalDurationMinutes: number;
-  stops: TourStop[];
-}
+import type { Tour } from '@/lib/tour/types';
 
 interface TourState {
   tour: Tour | null;
   currentStopIndex: number;
+  completedIds: string[];
   isDownloaded: boolean;
   downloadProgress: number;
   isDownloading: boolean;
@@ -39,6 +20,7 @@ interface TourState {
 export const useTourStore = create<TourState>((set, get) => ({
   tour: null,
   currentStopIndex: 0,
+  completedIds: [],
   isDownloaded: false,
   downloadProgress: 0,
   isDownloading: false,
@@ -48,16 +30,12 @@ export const useTourStore = create<TourState>((set, get) => ({
   setCurrentStopIndex: (index) => set({ currentStopIndex: index }),
 
   markStopCompleted: (stopId) => {
-    const tour = get().tour;
-    if (!tour) return;
-    set({
-      tour: {
-        ...tour,
-        stops: tour.stops.map((s) =>
-          s.id === stopId ? { ...s, isCompleted: true } : s,
-        ),
-      },
-    });
+    const id = stopId;
+    set((s) => ({
+      completedIds: s.completedIds.includes(id)
+        ? s.completedIds
+        : [...s.completedIds, id],
+    }));
   },
 
   setDownloaded: (value) => set({ isDownloaded: value }),
@@ -70,6 +48,7 @@ export const useTourStore = create<TourState>((set, get) => ({
     set({
       tour: null,
       currentStopIndex: 0,
+      completedIds: [],
       isDownloaded: false,
       downloadProgress: 0,
       isDownloading: false,
