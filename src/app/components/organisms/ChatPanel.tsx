@@ -55,6 +55,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
 
   const tour = useTourStore((s) => s.tour);
   const currentStopIndex = useTourStore((s) => s.currentStopIndex);
+  const completedIds = useTourStore((s) => s.completedIds);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
@@ -73,12 +74,13 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     setInput('');
 
     const currentStop = tour?.stops[currentStopIndex];
+    const currentId = currentStop?.id ?? tour?.stops[0]?.id ?? '';
     await sendMessage(trimmed, {
-      currentStopId: currentStop ? Number(currentStop.id) : 3,
+      currentStopId: currentId,
       stops: tour?.stops.map((s) => ({
-        id: Number(s.id),
+        id: s.id,
         name: s.name,
-        status: s.isCompleted ? 'completed' : 'future',
+        status: completedIds.includes(s.id) ? 'completed' : 'future',
       })) ?? [],
     });
   };
