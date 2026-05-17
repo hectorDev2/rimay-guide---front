@@ -16,6 +16,8 @@ interface MapState {
   pitch: number;
   /** Set this to a POI id to trigger a flyTo animation (cleared after flight) */
   pendingFlyToPoiId: string | null;
+  /** 3D viewer */
+  show3DViewer: boolean;
 
   setReady: (ready: boolean) => void;
   markDiscovered: (poiId: string) => void;
@@ -24,6 +26,7 @@ interface MapState {
   setCenter: (center: [number, number]) => void;
   setZoom: (zoom: number) => void;
   setPitch: (pitch: number) => void;
+  setShow3DViewer: (show: boolean) => void;
   /** Trigger flyTo animation + set active POI */
   flyToPoi: (poi: Poi) => void;
   /** Cleared by TourMap after executing flyTo */
@@ -44,6 +47,7 @@ export const useMapStore = create<MapState>((set) => ({
   zoom: DEFAULT_ZOOM,
   pitch: DEFAULT_PITCH,
   pendingFlyToPoiId: null,
+  show3DViewer: false,
 
   setReady: (ready) => set({ isReady: ready }),
 
@@ -57,6 +61,8 @@ export const useMapStore = create<MapState>((set) => ({
   setActivePoi: (poi) => set({ activePoi: poi, showPopup: poi !== null }),
 
   setShowPopup: (show) => set({ showPopup: show }),
+
+  setShow3DViewer: (show) => set({ show3DViewer: show }),
 
   setCenter: (center) => set({ center }),
   setZoom: (zoom) => set({ zoom }),
@@ -75,6 +81,7 @@ export const useMapStore = create<MapState>((set) => ({
     set({
       activePoi: null,
       showPopup: false,
+      show3DViewer: false,
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       pitch: DEFAULT_PITCH,
