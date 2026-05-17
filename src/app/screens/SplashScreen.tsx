@@ -1,13 +1,13 @@
 import { useRef } from 'react';
 import { Play, MapPin } from 'lucide-react';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
-import type { TourStop } from '../components/organisms/TourStopsList';
+import type { TourStopDisplay } from '../components/organisms/TourStopsList';
 
 interface SplashScreenProps {
   tourName: string;
-  stops: TourStop[];
-  currentStopId: number;
-  onSelectStop: (id: number) => void;
+  stops: TourStopDisplay[];
+  currentStopId: string;
+  onSelectStop: (id: string) => void;
   onShowLocation: () => void;
 }
 

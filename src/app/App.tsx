@@ -1,67 +1,58 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams } from 'react-router';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { AudioPlayer } from './components/organisms/AudioPlayer';
-import { TourStopsList, type TourStop } from './components/organisms/TourStopsList';
+import { TourStopsList, type TourStopDisplay } from './components/organisms/TourStopsList';
 import { LocationModal } from './components/organisms/LocationModal';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
 import { DebugLocationPanel } from './components/organisms/DebugLocationPanel';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
-import { useGeolocation } from '@/hooks/useGeolocation';
-import { INITIAL_STOPS } from '@/services/tourData';
-
-function getCurrentStop(stops: TourStop[]): TourStop {
-  return stops.find((s) => s.status === 'current') ?? stops[0];
-}
-
-function getNextStopName(stops: TourStop[], currentId: number): string | undefined {
-  const currentIndex = stops.findIndex((s) => s.id === currentId);
-  if (currentIndex === -1 || currentIndex >= stops.length - 1) return undefined;
-  return stops[currentIndex + 1].name;
-}
+import { useChatStore } from '@/stores/chatStore';
+import { SACSAYHUAMAN_TOUR, toDisplayStops } from '@/lib/tour/types';
 
 function useTourStops() {
   const navigate = useNavigate();
-  const [stops, setStops] = useState<TourStop[]>(INITIAL_STOPS);
+  const tour = useTourStore((s) => s.tour) ?? SACSAYHUAMAN_TOUR;
+  const completedIds = useTourStore((s) => s.completedIds);
+  const [currentStopId, setCurrentStopId] = useState(tour.stops[2]?.id ?? tour.stops[0]?.id);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showAddToHome, setShowAddToHome] = useState(false);
   const isDownloaded = useTourStore((s) => s.isDownloaded);
   const setDownloaded = useTourStore((s) => s.setDownloaded);
 
-  const markStops = useCallback((targetId: number) => {
-    setStops((prev) => {
-      const targetIndex = prev.findIndex((s) => s.id === targetId);
-      return prev.map((s) => {
-        const idx = prev.findIndex((x) => x.id === s.id);
-        if (idx < targetIndex) return { ...s, status: 'completed' as const };
-        if (idx === targetIndex) return { ...s, status: 'current' as const };
-        return { ...s, status: 'future' as const };
-      });
-    });
-  }, []);
+  const stops = useMemo(
+    () => toDisplayStops(tour.stops, new Set(completedIds), currentStopId),
+    [tour.stops, completedIds, currentStopId],
+  );
 
-  const handleSelectStop = useCallback((id: number) => {
-    markStops(id);
+  const currentStop = stops.find((s) => s.status === 'current') ?? stops[0];
+
+  const getNextStopName = useCallback((id: string): string | undefined => {
+    const idx = stops.findIndex((s) => s.id === id);
+    if (idx === -1 || idx >= stops.length - 1) return undefined;
+    return stops[idx + 1].name;
+  }, [stops]);
+
+  const handleSelectStop = useCallback((id: string) => {
+    setCurrentStopId(id);
     navigate(`/player?stopId=${id}`);
-  }, [markStops, navigate]);
+  }, [navigate]);
 
   const handleNext = useCallback(() => {
-    const current = getCurrentStop(stops);
-    const idx = stops.findIndex((s) => s.id === current.id);
+    const idx = stops.findIndex((s) => s.id === currentStop.id);
     if (idx >= stops.length - 1) return;
     handleSelectStop(stops[idx + 1].id);
-  }, [stops, handleSelectStop]);
+  }, [stops, currentStop, handleSelectStop]);
 
   const handlePrev = useCallback(() => {
-    const current = getCurrentStop(stops);
-    const idx = stops.findIndex((s) => s.id === current.id);
+    const idx = stops.findIndex((s) => s.id === currentStop.id);
     if (idx <= 0) return;
     handleSelectStop(stops[idx - 1].id);
-  }, [stops, handleSelectStop]);
+  }, [stops, currentStop, handleSelectStop]);
 
   const handleDownloadComplete = () => {
     setDownloaded(true);
@@ -70,7 +61,7 @@ function useTourStops() {
 
   return {
     stops,
-    currentStop: getCurrentStop(stops),
+    currentStop,
     showLocationModal,
     showDownloadModal,
     showAddToHome,
@@ -82,6 +73,7 @@ function useTourStops() {
     handleNext,
     handlePrev,
     handleDownloadComplete,
+    getNextStopName,
   };
 }
 
@@ -142,13 +134,15 @@ function PlayerRoute() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [searchParams] = useSearchParams();
-  const stopId = Number(searchParams.get('stopId')) || INITIAL_STOPS[2].id;
+  const paramId = searchParams.get('stopId');
   const t = useTourStops();
   const [showStopsList, setShowStopsList] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(false);
   const autoNavRef = useRef(false);
 
-  const currentStop = t.stops.find((s) => s.id === stopId) ?? t.currentStop;
+  const currentStop = paramId
+    ? t.stops.find((s) => s.id === paramId) ?? t.currentStop
+    : t.currentStop;
 
   useEffect(() => {
     setGeoEnabled(true);
@@ -165,7 +159,7 @@ function PlayerRoute() {
   });
 
   if (!isAuthenticated) {
-    return <Navigate to={`/login?redirect=/player?stopId=${stopId}`} replace />;
+    return <Navigate to={`/login?redirect=/player?stopId=${currentStop.id}`} replace />;
   }
 
   return (
@@ -175,7 +169,7 @@ function PlayerRoute() {
         onShowStopsList={() => setShowStopsList(true)}
         onNext={t.handleNext}
         onPrev={t.handlePrev}
-        nextStopName={getNextStopName(t.stops, currentStop.id)}
+        nextStopName={t.getNextStopName(currentStop.id)}
         onBack={() => navigate('/')}
       />
 
