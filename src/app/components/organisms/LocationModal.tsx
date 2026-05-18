@@ -151,13 +151,14 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                       {activePoi.category === 'tour_stop' ? 'Parada del tour' : activePoi.category}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setShow3DViewer(true)}
-                      className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--terracotta)]/10 hover:bg-[var(--terracotta)]/20 flex items-center justify-center text-[var(--terracotta)] transition-colors"
+                      className="flex-shrink-0 px-2.5 h-7 rounded-full bg-[var(--terracotta)] hover:bg-[var(--terracotta)]/90 flex items-center gap-1 text-white text-[11px] font-medium transition-colors shadow-sm"
                       title="Ver en 3D"
                     >
-                      <Box className="w-3.5 h-3.5" />
+                      <Box className="w-3 h-3" />
+                      3D
                     </button>
                     <button
                       onClick={() => { setActivePoi(null); setShowPopup(false); }}

@@ -42,6 +42,7 @@ export function TourMap({ className = '' }: TourMapProps) {
   const setPitch = useMapStore((s) => s.setPitch);
   const pendingFlyToPoiId = useMapStore((s) => s.pendingFlyToPoiId);
   const clearPendingFlyTo = useMapStore((s) => s.clearPendingFlyTo);
+  const setShow3DViewer = useMapStore((s) => s.setShow3DViewer);
 
   // ============================================================
   // 1. Initialize Mapbox map (once)
@@ -251,6 +252,9 @@ export function TourMap({ className = '' }: TourMapProps) {
   useEffect(() => {
     if (!mapRef.current) return;
 
+    const onViewer3d = () => setShow3DViewer(true);
+    window.addEventListener('open-viewer-3d', onViewer3d);
+
     // Close existing popup
     if (popupRef.current) {
       popupRef.current.remove();
@@ -259,8 +263,12 @@ export function TourMap({ className = '' }: TourMapProps) {
 
     const activePoi = useMapStore.getState().activePoi;
     const showPopup = useMapStore.getState().showPopup;
-    if (!activePoi || !showPopup) return;
+    if (!activePoi || !showPopup) {
+      window.removeEventListener('open-viewer-3d', onViewer3d);
+      return;
+    }
 
+    const poiColor = '#A0522D';
     const popupHtml = `
       <div style="font-family: system-ui, sans-serif; max-width: 220px;">
         <p style="font-weight: 600; font-size: 14px; margin: 0 0 4px; color: #2C2416;">
@@ -274,9 +282,15 @@ export function TourMap({ className = '' }: TourMapProps) {
             ? `<img src="${activePoi.imageUrl}" alt="${activePoi.name}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;margin-top:6px;" />`
             : ''
         }
-        <p style="font-size: 11px; color: #999; margin-top: 6px;">
+        <p style="font-size: 11px; color: #999; margin: 8px 0 0;">
           🏛️ ${activePoi.category === 'tour_stop' ? 'Parada del tour' : activePoi.category.charAt(0).toUpperCase() + activePoi.category.slice(1)}
         </p>
+        <button onclick="window.dispatchEvent(new CustomEvent('open-viewer-3d'))" style="
+          width: 100%; margin-top: 8px; padding: 6px 0;
+          border-radius: 8px; border: none;
+          background: #A0522D; color: white;
+          font-size: 12px; font-weight: 500; cursor: pointer;
+        ">🖼️ Ver en 3D</button>
       </div>
     `;
 
@@ -305,6 +319,10 @@ export function TourMap({ className = '' }: TourMapProps) {
         el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.35)';
       }
     });
+
+    return () => {
+      window.removeEventListener('open-viewer-3d', onViewer3d);
+    };
   }, [useMapStore.getState().activePoi, useMapStore.getState().showPopup]);
 
   if (!MAPBOX_TOKEN) {
