@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams } from 'react-router';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
@@ -11,6 +11,7 @@ import { DebugLocationPanel } from './components/organisms/DebugLocationPanel';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { SACSAYHUAMAN_TOUR, toDisplayStops } from '@/lib/tour/types';
 
 function useTourStops() {
@@ -152,7 +153,7 @@ function PlayerRoute() {
     enabled: geoEnabled,
     stops: t.stops,
     onEnterStop: (detectedStopId) => {
-      if (detectedStopId !== stopId) {
+      if (detectedStopId !== currentStop.id) {
         t.handleSelectStop(detectedStopId);
       }
     },
