@@ -1,7 +1,7 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { MapPin, Navigation } from 'lucide-react';
 import { useLocationStore } from '@/stores/locationStore';
-import type { TourStop } from './TourStopsList';
+import type { TourStopDisplay } from './TourStopsList';
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371e3;
@@ -13,9 +13,9 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 interface DebugLocationPanelProps {
-  stops: TourStop[];
-  onEnterStop?: (stopId: number) => void;
-  currentStopId?: number;
+  stops: TourStopDisplay[];
+  onEnterStop?: (stopId: string) => void;
+  currentStopId: string;
 }
 
 const CUSTOM_POSITIONS = [
@@ -27,9 +27,9 @@ export function DebugLocationPanel({ stops, onEnterStop, currentStopId }: DebugL
   const position = useLocationStore((s) => s.position);
   const setPosition = useLocationStore((s) => s.setPosition);
   const setActiveStop = useLocationStore((s) => s.setActiveStop);
-  const lastTriggeredRef = useRef<number | null>(null);
+  const lastTriggeredRef = useRef<string | null>(null);
 
-  const handleSimulate = (stop: TourStop) => {
+  const handleSimulate = (stop: TourStopDisplay) => {
     const pos = {
       latitude: stop.latitude,
       longitude: stop.longitude,
@@ -46,7 +46,7 @@ export function DebugLocationPanel({ stops, onEnterStop, currentStopId }: DebugL
   };
 
   const nearestStop = position
-    ? stops.reduce<{ stop: TourStop; dist: number } | null>((best, s) => {
+    ? stops.reduce<{ stop: TourStopDisplay; dist: number } | null>((best, s) => {
         const dist = calculateDistance(position.latitude, position.longitude, s.latitude, s.longitude);
         if (!best || dist < best.dist) return { stop: s, dist };
         return best;
@@ -98,7 +98,7 @@ export function DebugLocationPanel({ stops, onEnterStop, currentStopId }: DebugL
             </div>
 
             {CUSTOM_POSITIONS.map((pos, i) => {
-              const nearestToCustom = stops.reduce<{ stop: TourStop; dist: number } | null>((best, s) => {
+              const nearestToCustom = stops.reduce<{ stop: TourStopDisplay; dist: number } | null>((best, s) => {
                 const d = calculateDistance(pos.lat, pos.lng, s.latitude, s.longitude);
                 if (!best || d < best.dist) return { stop: s, dist: d };
                 return best;

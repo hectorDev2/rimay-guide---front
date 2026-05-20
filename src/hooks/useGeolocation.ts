@@ -45,7 +45,7 @@ interface UseGeolocationOptions {
   highAccuracy?: boolean;
   interval?: number;
   stops?: TourStop[];
-  onEnterStop?: (stopId: number) => void;
+  onEnterStop?: (stopId: string) => void;
 }
 
 export function useGeolocation(options: UseGeolocationOptions = {}) {
@@ -53,7 +53,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
   const watchIdRef = useRef<number | null>(null);
   const stopsRef = useRef<TourStop[]>(stops);
   const onEnterStopRef = useRef(onEnterStop);
-  const lastActiveRef = useRef<number | null>(null);
+  const lastActiveRef = useRef<string | null>(null);
 
   stopsRef.current = stops;
   onEnterStopRef.current = onEnterStop;

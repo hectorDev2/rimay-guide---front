@@ -1,13 +1,22 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams } from 'react-router';
+import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams, useLocation } from 'react-router';
+import { AnimatePresence } from 'motion/react';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
+import { NotFoundScreen } from './screens/NotFoundScreen';
 import { AudioPlayer } from './components/organisms/AudioPlayer';
 import { TourStopsList, type TourStopDisplay } from './components/organisms/TourStopsList';
 import { LocationModal } from './components/organisms/LocationModal';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
 import { DebugLocationPanel } from './components/organisms/DebugLocationPanel';
+import { ChatButton } from './components/organisms/ChatButton';
+import { ChatPanel } from './components/organisms/ChatPanel';
+import { ErrorBoundary } from './components/atoms/ErrorBoundary';
+import { OfflineToast } from './components/atoms/OfflineToast';
+import { PageTransition } from './components/atoms/PageTransition';
+import { MiniPlayer } from './components/organisms/MiniPlayer';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -21,9 +30,17 @@ function useTourStops() {
   const [currentStopId, setCurrentStopId] = useState(tour.stops[2]?.id ?? tour.stops[0]?.id);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadPrompted, setDownloadPrompted] = useState(false);
   const [showAddToHome, setShowAddToHome] = useState(false);
   const isDownloaded = useTourStore((s) => s.isDownloaded);
   const setDownloaded = useTourStore((s) => s.setDownloaded);
+
+  useEffect(() => {
+    if (!isDownloaded && !downloadPrompted) {
+      setDownloadPrompted(true);
+      setShowDownloadModal(true);
+    }
+  }, [isDownloaded, downloadPrompted]);
 
   const stops = useMemo(
     () => toDisplayStops(tour.stops, new Set(completedIds), currentStopId),
@@ -98,7 +115,7 @@ function SplashRoute() {
   }
 
   return (
-    <>
+    <PageTransition>
       <SplashScreen
         tourName="Sacsayhuamán — Fortaleza del Sol"
         stops={t.stops}
@@ -107,27 +124,33 @@ function SplashRoute() {
         onShowLocation={() => t.setShowLocationModal(true)}
       />
 
-      {t.showLocationModal && (
-        <LocationModal
-          stops={t.stops}
-          onClose={() => t.setShowLocationModal(false)}
-        />
-      )}
+      <AnimatePresence>
+        {t.showLocationModal && (
+          <LocationModal
+            stops={t.stops}
+            onClose={() => t.setShowLocationModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {t.showDownloadModal && (
-        <DownloadModal
-          onClose={() => t.setShowDownloadModal(false)}
-          onDownloadComplete={t.handleDownloadComplete}
-        />
-      )}
+      <AnimatePresence>
+        {t.showDownloadModal && (
+          <DownloadModal
+            onClose={() => t.setShowDownloadModal(false)}
+            onDownloadComplete={t.handleDownloadComplete}
+          />
+        )}
+      </AnimatePresence>
 
-      {t.showAddToHome && (
-        <AddToHomeScreen
-          onClose={() => t.setShowAddToHome(false)}
-          onSkip={() => t.setShowAddToHome(false)}
-        />
-      )}
-    </>
+      <AnimatePresence>
+        {t.showAddToHome && (
+          <AddToHomeScreen
+            onClose={() => t.setShowAddToHome(false)}
+            onSkip={() => t.setShowAddToHome(false)}
+          />
+        )}
+      </AnimatePresence>
+    </PageTransition>
   );
 }
 
@@ -164,7 +187,7 @@ function PlayerRoute() {
   }
 
   return (
-    <>
+    <PageTransition>
       <AudioPlayer
         stop={currentStop}
         onShowStopsList={() => setShowStopsList(true)}
@@ -174,18 +197,36 @@ function PlayerRoute() {
         onBack={() => navigate('/')}
       />
 
-      {showStopsList && (
-        <TourStopsList
-          stops={t.stops}
-          onClose={() => setShowStopsList(false)}
-          onSelectStop={(id) => {
-            setShowStopsList(false);
-            t.handleSelectStop(id);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {showStopsList && (
+          <TourStopsList
+            stops={t.stops}
+            onClose={() => setShowStopsList(false)}
+            onSelectStop={(id) => {
+              setShowStopsList(false);
+              t.handleSelectStop(id);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <DebugLocationPanel stops={t.stops} onEnterStop={t.handleSelectStop} currentStopId={currentStop.id} />
+    </PageTransition>
+  );
+}
+
+function ChatWrapper() {
+  const isOpen = useChatStore((s) => s.isOpen);
+  const toggleChat = useChatStore((s) => s.toggleChat);
+
+  return (
+    <>
+      <ChatButton />
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0E0E0E]">
+          <ChatPanel onClose={() => toggleChat()} />
+        </div>
+      )}
     </>
   );
 }
@@ -214,16 +255,26 @@ function LoginRoute() {
 }
 
 export default function App() {
+  const location = useLocation();
+
   return (
-    <div className="size-full relative">
-      <div className="h-full w-full max-w-md mx-auto relative bg-white shadow-2xl overflow-hidden">
-        <Routes>
-          <Route path="/" element={<SplashRoute />} />
-          <Route path="/login" element={<LoginRoute />} />
-          <Route path="/player" element={<PlayerRoute />} />
-          <Route path="/tour/:slug" element={<TourRoute />} />
-        </Routes>
+    <ErrorBoundary>
+      <div className="size-full relative dark">
+        <div className="h-full w-full max-w-md mx-auto relative bg-background text-foreground overflow-hidden">
+          <OfflineToast />
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<SplashRoute />} />
+              <Route path="/login" element={<LoginRoute />} />
+              <Route path="/player" element={<PlayerRoute />} />
+              <Route path="/tour/:slug" element={<TourRoute />} />
+              <Route path="*" element={<NotFoundScreen />} />
+            </Routes>
+          </AnimatePresence>
+          <ChatWrapper />
+          <MiniPlayer />
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
