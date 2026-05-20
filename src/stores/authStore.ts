@@ -22,8 +22,8 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
+  user: { id: 'demo', email: 'demo@rimay.pe', name: 'Usuario Demo', provider: 'email' },
+  isAuthenticated: true,
   isLoading: false,
   error: null,
 
