@@ -8,7 +8,7 @@ export function ChatButton() {
   return (
     <button
       onClick={toggleChat}
-      className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[var(--terracotta)] text-white shadow-lg shadow-[var(--terracotta)]/30 flex items-center justify-center hover:bg-[#8B4513] transition-all active:scale-95"
+      className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#E6FF00] text-[#111111] shadow-[0_8px_20px_rgba(230,255,0,0.3)] flex items-center justify-center hover:bg-[#D6F500] transition-all active:scale-90"
       aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat'}
     >
       {isOpen ? (

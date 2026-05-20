@@ -127,7 +127,7 @@ const TOUR_STOP_HOTSPOTS: HotspotDef[] = [
     id: 'info-point',
     position: [0, 0.8, 0],
     label: 'Punto de información',
-    description: 'Parada del recorrido con contenido histórico y cultural. Escuchá la narración para conocer la historia detrás de cada lugar.',
+    description: 'Parada del recorrido con contenido histórico y cultural. Escucha la narración para conocer la historia detrás de cada lugar.',
   },
 ];
 

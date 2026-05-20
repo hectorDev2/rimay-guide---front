@@ -106,7 +106,7 @@ const CULTURAL_KNOWLEDGE: KnowledgeItem[] = [
   {
     id: 'app_info',
     title: 'Rimay Guide',
-    content: 'Rimay Guide es una guía de audio para tours en Cusco. Escuchá el Cusco como lo cuenta su gente. Podés navegar las paradas del tour, escuchar narraciones, ver tu ubicación en el mapa, descargar el tour para usarlo sin internet, y chatear con la IA sobre la cultura Inca. El nombre "Rimay" significa "hablar" en quechua.',
+    content: 'Rimay Guide es una guía de audio para tours en Cusco. Escucha el Cusco como lo cuenta su gente. Puedes navegar las paradas del tour, escuchar narraciones, ver tu ubicación en el mapa, descargar el tour para usarlo sin internet, y chatear con la IA sobre la cultura Inca. El nombre "Rimay" significa "hablar" en quechua.',
     tags: ['rimay', 'app', 'guía', 'audio', 'tour', 'cusco'],
     category: 'general' as const,
   },

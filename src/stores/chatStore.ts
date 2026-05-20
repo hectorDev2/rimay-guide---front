@@ -31,13 +31,26 @@ function detectOnline(): boolean {
   return navigator.onLine && !!import.meta.env.VITE_GEMINI_API_KEY;
 }
 
-const saved = typeof window !== 'undefined'
-  ? localStorage.getItem('rimay_chat_messages')
-  : null;
+let saved: string | null = null;
+try {
+  saved = typeof window !== 'undefined'
+    ? localStorage.getItem('rimay_chat_messages')
+    : null;
+} catch {
+  saved = null;
+}
 
-const initialMessages: Message[] = saved
-  ? JSON.parse(saved)
-  : [
+let parsedSaved: Message[] | null = null;
+if (saved) {
+  try {
+    parsedSaved = JSON.parse(saved);
+    if (!Array.isArray(parsedSaved)) parsedSaved = null;
+  } catch {
+    parsedSaved = null;
+  }
+}
+
+const initialMessages: Message[] = parsedSaved ?? [
       {
         id: 'welcome',
         role: 'assistant',

@@ -27,7 +27,7 @@ function formatResponse(results: string[], query: string): string {
     }
 
     if (lower.includes('gracias') || lower.includes('graciela')) {
-      return '¡De nada! Disfrutá tu recorrido por Sacsayhuamán. Si tenés más preguntas, acá estoy. 😊';
+      return '¡De nada! Disfruta tu recorrido por Sacsayhuamán. Si tienes más preguntas, acá estoy. 😊';
     }
 
     const currentStop = SACSAYHUAMAN_TOUR.stops.find(

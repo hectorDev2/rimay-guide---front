@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
 import { useAuthStore } from '@/stores/authStore';
+import { Mail, Lock, ArrowLeft } from 'lucide-react';
 
 interface LoginScreenProps {
   onLogin?: () => void;
@@ -32,27 +33,25 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-black flex flex-col">
+    <div className="min-h-screen w-full bg-[#0E0E0E] flex flex-col">
       <div className="absolute inset-0">
         <ImageWithFallback
           src="https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800&q=85"
           alt="Sacsayhuamán - Cusco"
-          className="w-full h-full object-cover opacity-60"
+          className="w-full h-full object-cover opacity-40"
+          loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-[#0E0E0E]/30 to-transparent" />
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end">
-        <div className="bg-white rounded-t-3xl p-8 mt-8">
+        <div className="bg-[#171717] rounded-t-[30px] px-5 pt-8 pb-6 border-t border-[#2C2C2C]/50 shadow-[0_-10px_30px_rgba(0,0,0,0.35)]">
           <div className="text-center mb-8">
-            <h1
-              className="text-3xl text-[var(--dark-charcoal)] mb-2"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
+            <h1 className="text-[28px] font-semibold text-white mb-2">
               Bienvenido
             </h1>
-            <p className="text-[var(--muted-foreground)] text-base">
-              Escuchá el Cusco como lo cuenta su gente
+            <p className="text-[#6E6E6E] text-[15px]">
+              Escucha el Cusco como lo cuenta su gente
             </p>
           </div>
 
@@ -62,7 +61,7 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
               type="button"
               onClick={() => handleSocialLogin('google')}
               disabled={isLoading}
-              className="flex-1 h-12 flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--warm-white)] transition-colors disabled:opacity-50"
+              className="flex-1 h-12 flex items-center justify-center rounded-full bg-[#1E1E1E] border border-[#2C2C2C] hover:bg-[#232323] transition-all disabled:opacity-50 active:scale-[0.97]"
               aria-label="Iniciar sesión con Google"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -76,71 +75,77 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
               type="button"
               onClick={() => handleSocialLogin('apple')}
               disabled={isLoading}
-              className="flex-1 h-12 flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--warm-white)] transition-colors disabled:opacity-50"
+              className="flex-1 h-12 flex items-center justify-center rounded-full bg-[#1E1E1E] border border-[#2C2C2C] hover:bg-[#232323] transition-all disabled:opacity-50 active:scale-[0.97]"
               aria-label="Iniciar sesión con Apple"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
             </button>
           </div>
 
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-sm text-[var(--muted-foreground)]">o</span>
-            <div className="flex-1 h-px bg-[var(--border)]" />
+            <div className="flex-1 h-px bg-[#2C2C2C]" />
+            <span className="text-[13px] text-[#6E6E6E]">o</span>
+            <div className="flex-1 h-px bg-[#2C2C2C]" />
           </div>
 
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm text-center">
+            <div className="mb-4 p-3 rounded-[16px] bg-[#FF4D67]/10 border border-[#FF4D67]/20 text-[#FF4D67] text-[13px] text-center">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-[var(--dark-charcoal)]">
+              <label htmlFor="email" className="text-[13px] font-medium text-white/80">
                 Correo electrónico
               </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl border-[var(--border)] bg-white px-4 text-base focus:border-[var(--terracotta)] focus:ring-[var(--terracotta)]/20"
-                placeholder="tu@email.com"
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#6E6E6E]" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 w-full rounded-full bg-[#1E1E1E] border border-[#2C2C2C] pl-12 pr-4 text-[15px] text-white placeholder:text-[#6E6E6E] focus:border-[#E6FF00] focus:ring-[#E6FF00]/20"
+                  placeholder="tu@email.com"
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-[var(--dark-charcoal)]">
+              <label htmlFor="password" className="text-[13px] font-medium text-white/80">
                 Contraseña
               </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 rounded-xl border-[var(--border)] bg-white px-4 text-base focus:border-[var(--terracotta)] focus:ring-[var(--terracotta)]/20"
-                placeholder=""
-                required
-              />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#6E6E6E]" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 w-full rounded-full bg-[#1E1E1E] border border-[#2C2C2C] pl-12 pr-4 text-[15px] text-white placeholder:text-[#6E6E6E] focus:border-[#E6FF00] focus:ring-[#E6FF00]/20"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </div>
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 rounded-2xl bg-[var(--terracotta)] hover:bg-[#8B4513] text-white text-base font-medium mt-6 shadow-lg shadow-[var(--terracotta)]/30 disabled:opacity-50"
+              className="w-full h-14 rounded-full bg-[#E6FF00] hover:bg-[#D6F500] text-[#111111] text-[15px] font-semibold shadow-[0_8px_20px_rgba(230,255,0,0.3)] disabled:opacity-50 active:scale-[0.97] transition-all"
             >
               {isLoading ? 'Ingresando...' : 'Continuar'}
             </Button>
           </form>
 
-          <p className="text-center mt-8 text-base text-[var(--muted-foreground)]">
-            ¿No tenés cuenta?{' '}
-            <button type="button" onClick={onSignUp} className="text-[var(--terracotta)] font-medium hover:underline">
-              Registrate
+          <p className="text-center mt-8 text-[15px] text-[#6E6E6E]">
+            ¿No tienes cuenta?{' '}
+            <button type="button" onClick={onSignUp} className="text-[#E6FF00] font-medium hover:underline">
+              Regístrate
             </button>
           </p>
         </div>

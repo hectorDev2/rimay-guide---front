@@ -238,7 +238,7 @@ export function SiteViewer3D({ poi, open, onClose }: SiteViewer3DProps) {
           {poi && (
             <div className="bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
               <div className="px-6 pb-8 pt-12">
-                <h2 className="text-white text-xl font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+                <h2 className="text-white text-xl font-semibold">
                   {poi.name}
                 </h2>
                 <p className="text-white/60 text-sm mt-2 leading-relaxed line-clamp-3">
@@ -252,7 +252,7 @@ export function SiteViewer3D({ poi, open, onClose }: SiteViewer3DProps) {
           )}
 
           <div className="absolute top-4 left-4 text-[10px] text-white/30 uppercase tracking-wider pointer-events-none">
-            Arrastrá para rotar · Scroll para zoom
+            Arrastra para rotar · Scroll para zoom
           </div>
         </div>
       </SheetContent>

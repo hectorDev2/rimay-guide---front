@@ -44,7 +44,7 @@ async function* handleOnlineQuery(
   } catch (error) {
     yield `Lo siento, hubo un error al conectar con la IA. ${
       error instanceof Error ? error.message : ''
-    }\n\nPodés seguir usando el chat en modo offline mientras tanto.`;
+    }\n\nPuedes seguir usando el chat en modo offline mientras tanto.`;
   }
 }
 

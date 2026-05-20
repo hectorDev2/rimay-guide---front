@@ -12,8 +12,8 @@ function MessageBubble({ message }: { message: Message }) {
       <div
         className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
           isUser
-            ? 'bg-[var(--terracotta)] text-white rounded-br-md'
-            : 'bg-[var(--stone-gray)] text-[var(--dark-charcoal)] rounded-bl-md'
+            ? 'bg-[#E6FF00] text-[#111111] rounded-br-md'
+            : 'bg-[#1E1E1E] text-white rounded-bl-md border border-[#2C2C2C]'
         }`}
       >
         {message.content.split('\n').map((line, i) => (
@@ -30,11 +30,11 @@ function MessageBubble({ message }: { message: Message }) {
 function TypingIndicator() {
   return (
     <div className="flex justify-start mb-3">
-      <div className="bg-[var(--stone-gray)] rounded-2xl rounded-bl-md px-4 py-3">
+      <div className="bg-[#1E1E1E] rounded-2xl rounded-bl-md px-4 py-3 border border-[#2C2C2C]">
         <div className="flex gap-1">
-          <span className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="w-2 h-2 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <span className="w-2 h-2 bg-[#6E6E6E] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-2 h-2 bg-[#6E6E6E] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-2 h-2 bg-[#6E6E6E] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
       </div>
     </div>
@@ -90,21 +90,21 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     : messages;
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+    <div className="flex flex-col h-full bg-[#0E0E0E]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2C2C2C]">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-[var(--terracotta)] flex items-center justify-center">
-            <MessageCircle className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full bg-[#E6FF00] flex items-center justify-center">
+            <MessageCircle className="w-4 h-4 text-[#111111]" />
           </div>
           <div>
-            <h2 className="text-sm font-medium text-[var(--dark-charcoal)]">Rimay IA</h2>
+            <h2 className="text-sm font-medium text-white">Rimay IA</h2>
             <div className="flex items-center gap-1">
               {isOnline ? (
-                <Wifi className="w-3 h-3 text-green-500" />
+                <Wifi className="w-3 h-3 text-[#AFFF00]" />
               ) : (
-                <WifiOff className="w-3 h-3 text-orange-500" />
+                <WifiOff className="w-3 h-3 text-[#FFB84D]" />
               )}
-              <span className="text-xs text-[var(--muted-foreground)]">
+              <span className="text-xs text-[#6E6E6E]">
                 {isOnline ? 'Conectado' : 'Modo offline'}
               </span>
             </div>
@@ -113,14 +113,14 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2">
           <button
             onClick={clearChat}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
+            className="p-2 rounded-xl hover:bg-[#1E1E1E] text-[#6E6E6E] hover:text-[#FF4D67] transition-colors"
             title="Limpiar chat"
           >
             <Trash2 className="w-4 h-4" />
           </button>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors"
+            className="p-2 rounded-xl hover:bg-[#1E1E1E] text-[#6E6E6E] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -132,9 +132,9 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
           msg.id === 'streaming'
             ? (
               <div key="streaming" className="flex justify-start mb-3">
-                <div className="max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed bg-[var(--stone-gray)] text-[var(--dark-charcoal)] rounded-bl-md">
+                <div className="max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed bg-[#1E1E1E] text-white rounded-bl-md border border-[#2C2C2C]">
                   {msg.content}
-                  <span className="inline-block w-1 h-4 bg-[var(--terracotta)] ml-0.5 animate-pulse" />
+                  <span className="inline-block w-1 h-4 bg-[#E6FF00] ml-0.5 animate-pulse" />
                 </div>
               </div>
             )
@@ -144,21 +144,21 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t border-gray-100 p-4">
+      <form onSubmit={handleSubmit} className="border-t border-[#2C2C2C] p-4">
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Preguntale a Rimay IA..."
-            className="flex-1 h-11 rounded-xl bg-[var(--warm-white)] border border-gray-200 px-4 text-sm text-[var(--dark-charcoal)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--terracotta)] focus:ring-1 focus:ring-[var(--terracotta)]/20"
+            placeholder="Pregúntale a Rimay IA..."
+            className="flex-1 h-11 rounded-full bg-[#1B1B1B] border border-[#2C2C2C] px-4 text-sm text-white placeholder:text-[#6E6E6E] focus:outline-none focus:border-[#E6FF00] focus:ring-1 focus:ring-[#E6FF00]/20"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="w-11 h-11 rounded-xl bg-[var(--terracotta)] text-white flex items-center justify-center disabled:opacity-40 transition-opacity hover:bg-[#8B4513]"
+            className="w-11 h-11 rounded-full bg-[#E6FF00] text-[#111111] flex items-center justify-center disabled:opacity-40 transition-opacity hover:bg-[#D6F500] active:scale-90"
           >
             <Send className="w-4 h-4" />
           </button>
