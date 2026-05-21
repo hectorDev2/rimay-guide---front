@@ -1,14 +1,6 @@
 import { create } from 'zustand';
-
-type AuthProvider = 'email' | 'google' | 'apple';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  avatarUrl?: string;
-  provider: AuthProvider;
-}
+import { supabase } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 
 interface AuthState {
   user: User | null;
@@ -16,52 +8,76 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   socialLogin: (provider: 'google' | 'apple') => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
+  initialize: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: { id: 'demo', email: 'demo@rimay.pe', name: 'Usuario Demo', provider: 'email' },
-  isAuthenticated: true,
-  isLoading: false,
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
   error: null,
 
-  login: async (email: string, _password: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      // TODO: Replace with Supabase auth call
-      await new Promise((r) => setTimeout(r, 800));
+  initialize: () => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       set({
-        user: { id: '1', email, provider: 'email' },
-        isAuthenticated: true,
+        user: session?.user ?? null,
+        isAuthenticated: !!session,
         isLoading: false,
       });
-    } catch {
-      set({ error: 'Credenciales inválidas', isLoading: false });
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      set({
+        user: session?.user ?? null,
+        isAuthenticated: !!session,
+        isLoading: false,
+      });
+    });
+  },
+
+  login: async (email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
     }
+  },
+
+  signUp: async (email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
+    if (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+    set({ isLoading: false });
   },
 
   socialLogin: async (provider: 'google' | 'apple') => {
     set({ isLoading: true, error: null });
-    try {
-      // TODO: Replace with Supabase OAuth
-      await new Promise((r) => setTimeout(r, 800));
-      set({
-        user: {
-          id: '1',
-          email: `user@${provider}.com`,
-          provider,
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch {
-      set({ error: `Error al iniciar con ${provider}`, isLoading: false });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
     }
   },
 
-  logout: () => {
+  logout: async () => {
+    await supabase.auth.signOut();
     set({ user: null, isAuthenticated: false });
   },
 

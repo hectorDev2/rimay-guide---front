@@ -20,7 +20,6 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
-import { useGeolocation } from '@/hooks/useGeolocation';
 import { SACSAYHUAMAN_TOUR, toDisplayStops } from '@/lib/tour/types';
 
 function useTourStops() {
@@ -234,7 +233,6 @@ function ChatWrapper() {
 function LoginRoute() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const login = useAuthStore((s) => s.login);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const redirect = searchParams.get('redirect') ?? '/';
@@ -245,10 +243,7 @@ function LoginRoute() {
 
   return (
     <LoginScreen
-      onLogin={() => {
-        login('', '');
-        navigate(redirect, { replace: true });
-      }}
+      onLogin={() => navigate(redirect, { replace: true })}
       onSignUp={() => {}}
     />
   );
@@ -256,6 +251,22 @@ function LoginRoute() {
 
 export default function App() {
   const location = useLocation();
+  const initializeAuth = useAuthStore((s) => s.initialize);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  if (isLoading) {
+    return (
+      <div className="size-full relative dark">
+        <div className="h-full w-full max-w-md mx-auto relative bg-background flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[var(--terracotta)]/30 border-t-[var(--terracotta)] rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
