@@ -1,6 +1,8 @@
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Play, MapPin, ChevronDown } from 'lucide-react';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
+import { LanguageSwitcher } from '../components/atoms/LanguageSwitcher';
 import type { TourStopDisplay } from '../components/organisms/TourStopsList';
 
 interface SplashScreenProps {
@@ -18,6 +20,7 @@ export function SplashScreen({
   onSelectStop,
   onShowLocation,
 }: SplashScreenProps) {
+  const { t } = useTranslation();
   const stopsRef = useRef<HTMLDivElement>(null);
 
   const scrollToStops = () => {
@@ -36,8 +39,11 @@ export function SplashScreen({
         <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-[#0E0E0E]/40 to-transparent" />
       </div>
 
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       <div className="relative flex-1 flex flex-col justify-between text-white">
-        {/* Hero */}
         <div className="pt-[52px] px-5 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-[22px] bg-white/10 backdrop-blur-[20px] border border-white/10 mb-5 shadow-lg">
             <svg viewBox="0 0 24 24" fill="none" stroke="#E6FF00" strokeWidth="2" className="w-8 h-8">
@@ -50,29 +56,27 @@ export function SplashScreen({
             Rimay Guide
           </h1>
           <p className="text-white/60 mt-2 text-[15px] font-medium">
-            Escucha el Cusco como lo cuenta su gente
+            {t('login.subtitle')}
           </p>
         </div>
 
-        {/* Bottom Sheet */}
         <div className="bg-[#171717] rounded-t-[30px] px-5 pt-6 pb-5 shadow-[0_-10px_30px_rgba(0,0,0,0.35)] mt-8 border-t border-[#2C2C2C]/50">
           <h2 className="text-[24px] font-semibold text-white mb-1">
             {tourName}
           </h2>
           <div className="flex items-center gap-2 text-[13px] text-[#6E6E6E] mb-6">
-            <span>Tour de {stops.length} paradas</span>
+            <span>{t('splash.stops', { count: stops.length })}</span>
             <span className="w-1 h-1 rounded-full bg-[#6E6E6E]" />
-            <span>45 min aprox.</span>
+            <span>{t('splash.duration', { min: 45 })}</span>
           </div>
 
-          {/* Action Buttons */}
           <div className="space-y-3 mb-6">
             <button
               onClick={() => onSelectStop(currentStopId)}
               className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all"
             >
               <Play className="w-5 h-5" fill="#111111" />
-              Iniciar narración
+              {t('splash.start')}
             </button>
 
             <button
@@ -80,7 +84,7 @@ export function SplashScreen({
               className="w-full h-14 rounded-full bg-[#1E1E1E] text-white text-[15px] font-medium flex items-center justify-center gap-2 border border-[#2C2C2C] active:scale-[0.96] transition-all"
             >
               <MapPin className="w-5 h-5 text-[#E6FF00]" />
-              Ver ubicación
+              {t('splash.viewLocation')}
             </button>
 
             <button
@@ -88,14 +92,13 @@ export function SplashScreen({
               className="w-full h-14 rounded-full text-[#A6A6A6] text-[15px] font-medium flex items-center justify-center gap-2 active:scale-[0.96] transition-all"
             >
               <ChevronDown className="w-5 h-5" />
-              Ver todas las paradas
+              {t('splash.viewStops')}
             </button>
           </div>
 
-          {/* Stops List */}
           <div ref={stopsRef} className="border-t border-[#2C2C2C] pt-4">
             <h3 className="text-[11px] font-semibold text-[#6E6E6E] uppercase tracking-wider mb-3">
-              Paradas del tour
+              {t('splash.tourStopsTitle')}
             </h3>
             <div className="space-y-1">
               {stops.map((stop, index) => {
@@ -141,7 +144,7 @@ export function SplashScreen({
                     {isActive && (
                       <div className="flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 bg-[#E6FF00] rounded-full shadow-[0_0_8px_rgba(230,255,0,0.6)] animate-pulse" />
-                        <span className="text-[11px] text-[#E6FF00] font-medium">Reproduciendo</span>
+                        <span className="text-[11px] text-[#E6FF00] font-medium">{t('player.playing')}</span>
                       </div>
                     )}
                   </button>

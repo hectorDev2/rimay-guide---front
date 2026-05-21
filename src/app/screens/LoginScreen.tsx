@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
+import { LanguageSwitcher } from '../components/atoms/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { Mail, Lock, ArrowLeft } from 'lucide-react';
 
@@ -11,6 +13,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const login = useAuthStore((s) => s.login);
@@ -44,14 +47,18 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-[#0E0E0E]/30 to-transparent" />
       </div>
 
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       <div className="relative flex-1 flex flex-col justify-end">
         <div className="bg-[#171717] rounded-t-[30px] px-5 pt-8 pb-6 border-t border-[#2C2C2C]/50 shadow-[0_-10px_30px_rgba(0,0,0,0.35)]">
           <div className="text-center mb-8">
             <h1 className="text-[28px] font-semibold text-white mb-2">
-              Bienvenido
+              {t('login.title')}
             </h1>
             <p className="text-[#6E6E6E] text-[15px]">
-              Escucha el Cusco como lo cuenta su gente
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -86,7 +93,7 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
 
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1 h-px bg-[#2C2C2C]" />
-            <span className="text-[13px] text-[#6E6E6E]">o</span>
+            <span className="text-[13px] text-[#6E6E6E]">{t('login.or')}</span>
             <div className="flex-1 h-px bg-[#2C2C2C]" />
           </div>
 
@@ -99,7 +106,7 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-[13px] font-medium text-white/80">
-                Correo electrónico
+                {t('login.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#6E6E6E]" />
@@ -109,7 +116,7 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-12 w-full rounded-full bg-[#1E1E1E] border border-[#2C2C2C] pl-12 pr-4 text-[15px] text-white placeholder:text-[#6E6E6E] focus:border-[#E6FF00] focus:ring-[#E6FF00]/20"
-                  placeholder="tu@email.com"
+                  placeholder={t('login.emailPlaceholder')}
                   required
                 />
               </div>
@@ -117,7 +124,7 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-[13px] font-medium text-white/80">
-                Contraseña
+                {t('login.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#6E6E6E]" />
@@ -138,14 +145,14 @@ export function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
               disabled={isLoading}
               className="w-full h-14 rounded-full bg-[#E6FF00] hover:bg-[#D6F500] text-[#111111] text-[15px] font-semibold shadow-[0_8px_20px_rgba(230,255,0,0.3)] disabled:opacity-50 active:scale-[0.97] transition-all"
             >
-              {isLoading ? 'Ingresando...' : 'Continuar'}
+              {isLoading ? t('login.loggingIn') : t('login.continue')}
             </Button>
           </form>
 
           <p className="text-center mt-8 text-[15px] text-[#6E6E6E]">
-            ¿No tienes cuenta?{' '}
+            {t('login.noAccount')}{' '}
             <button type="button" onClick={onSignUp} className="text-[#E6FF00] font-medium hover:underline">
-              Regístrate
+              {t('login.signUp')}
             </button>
           </p>
         </div>

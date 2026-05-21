@@ -2,6 +2,7 @@ const WAVEFORM_BARS = 48;
 const WAVEFORM_HEIGHTS = Array.from({ length: WAVEFORM_BARS }, () => Math.random() * 60 + 20);
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle, ArrowLeft } from 'lucide-react';
 import { useTourStore } from '@/stores/tourStore';
@@ -18,6 +19,7 @@ interface AudioPlayerProps {
 }
 
 export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopName, onBack }: AudioPlayerProps) {
+  const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -173,7 +175,7 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
               <button
                 onClick={onBack}
                 className="w-12 h-12 rounded-full bg-[#1E1E1E] flex items-center justify-center hover:bg-[#2C2C2C] transition-colors"
-                aria-label="Volver"
+                aria-label={t('player.back')}
               >
                 <ArrowLeft className="w-5 h-5 text-white" />
               </button>
@@ -182,7 +184,7 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
           <div className="bg-white/10 backdrop-blur-[20px] px-4 py-2 rounded-full border border-white/10">
             <span className="text-white text-xs flex items-center gap-1.5 font-medium">
               <span className="w-1.5 h-1.5 bg-[#AFFF00] rounded-full shadow-[0_0_8px_rgba(175,255,0,0.6)]" />
-              Sin conexión
+              {t('player.offline')}
             </span>
           </div>
         </div>
@@ -315,7 +317,7 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
           className="w-full bg-[#171717] border border-[#2C2C2C] rounded-full px-5 py-3 flex items-center justify-between hover:bg-[#1E1E1E] transition-all active:scale-[0.98]"
         >
           <span className="text-white text-[15px] font-medium">
-            Siguiente: {nextStopName || 'Fin del tour'}
+            {t('player.next', { name: nextStopName ?? t('player.endOfTour') })}
           </span>
           <ChevronUp className="w-5 h-5 text-white/60" />
         </button>
@@ -333,18 +335,27 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
                 transition={{ duration: 0.2 }}
                 className="flex flex-col items-center gap-3 mb-4"
               >
-                <button className="w-14 h-14 rounded-2xl bg-[#1E1E1E] backdrop-blur-[20px] text-white flex flex-col items-center justify-center text-[11px] border border-white/10 hover:bg-[#2C2C2C] transition-all active:scale-90 shadow-lg">
+                <motion.button
+                  variants={fabItemVariants}
+                  className="w-14 h-14 rounded-2xl bg-[#1E1E1E] backdrop-blur-[20px] text-white flex flex-col items-center justify-center text-[11px] border border-white/10 hover:bg-[#2C2C2C] transition-all active:scale-90 shadow-lg"
+                >
                   <HelpCircle className="w-5 h-5 mb-1" />
-                  <span>FAQ</span>
-                </button>
-                <button className="w-14 h-14 rounded-2xl bg-[#1E1E1E] backdrop-blur-[20px] text-white flex flex-col items-center justify-center text-[11px] border border-white/10 hover:bg-[#2C2C2C] transition-all active:scale-90 shadow-lg">
-                  <Lightbulb className="w-5 h-5 mb-1" />
-                  <span>Sugerir</span>
-                </button>
-                <button className="w-14 h-14 rounded-2xl bg-[#1E1E1E] backdrop-blur-[20px] text-white flex flex-col items-center justify-center text-[11px] border border-white/10 hover:bg-[#2C2C2C] transition-all active:scale-90 shadow-lg">
-                  <MessageSquare className="w-5 h-5 mb-1" />
-                  <span>Bot</span>
-                </button>
+                  <span>{t('player.faq')}</span>
+                </motion.button>
+                <motion.button
+                  variants={fabItemVariants}
+                  className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md text-white flex flex-col items-center justify-center text-xs hover:bg-white/30 active:scale-95 transition-all"
+                >
+                  <Lightbulb className="w-6 h-6 mb-1" />
+                  <span>{t('player.suggest')}</span>
+                </motion.button>
+                <motion.button
+                  variants={fabItemVariants}
+                  className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md text-white flex flex-col items-center justify-center text-xs hover:bg-white/30 active:scale-95 transition-all"
+                >
+                  <MessageSquare className="w-6 h-6 mb-1" />
+                  <span>{t('player.bot')}</span>
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>

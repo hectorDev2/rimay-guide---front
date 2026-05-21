@@ -1,74 +1,197 @@
-# Rimay Guide PWA — Guía de Audio para Tours en Cusco
+# Rimay Guide — Guía de Audio para Tours en Cusco
 
-Aplicación web progresiva (PWA) para audio-guías con geolocalización de sitios arqueológicos en Cusco. Diseño Dark Neon UI con glassmorphism.
+PWA offline-first para audio-guías con geolocalización en sitios arqueológicos de Cusco.
 
-## Tech Stack
+## Stack
 
-- **Framework**: React 18 + TypeScript
-- **Bundler**: Vite 6
-- **Routing**: react-router v7
-- **State**: Zustand (5 stores)
-- **UI**: Tailwind CSS v4 + shadcn/ui + Motion (Framer Motion)
-- **3D**: Three.js + React Three Fiber + Drei
-- **Mapa**: Mapbox GL JS
-- **IA**: Google Gemini API + Fuse.js (offline search)
-- **PWA**: vite-plugin-pwa (Workbox)
+| Capa | Tecnología |
+|------|-----------|
+| Framework | React 18 + TypeScript |
+| Bundler | Vite 6 |
+| Routing | react-router v7 (URL-based, QR-ready) |
+| State | Zustand (auth, tour, location, map, chat) |
+| UI | Tailwind CSS v4 + shadcn/ui + Motion |
+| Auth | Supabase Auth (email, Google, Apple) |
+| DB | Supabase PostgreSQL + RLS |
+| Mapa 3D | Mapbox GL JS (satellite-streets, fill-extrusion, pitch 45°) |
+| Visor 3D | Three.js + React Three Fiber + Drei |
+| Geolocalización | `navigator.geolocation.watchPosition` + Haversine |
+| PWA | vite-plugin-pwa (Workbox, auto-update) |
+| IA | Gemini API (opcional, fallback offline con Fuse.js) |
 
-## Design System
+---
 
-Dark neon con acento #E6FF00 sobre fondo #0E0E0E. Tipografía Poppins. Todos los tokens definidos en `src/styles/theme.css` y documentados en `DesignSystem.tsx`.
+## Flujo técnico
 
-## Features
+### 1. Autenticación
 
-- 🎵 **Audio Player** con waveform, seek, neon glow, mini player flotante
-- 🗺️ **Mapa interactivo** con paradas y puntos de interés (Mapbox)
-- 🏛️ **Visor 3D** de sitios arqueológicos con hotspots interactivos
-- 🤖 **Chat IA** offline/online con Gemini sobre cultura inca
-- 📍 **Geolocalización** con detección de entrada a zonas de parada
-- 📥 **Descarga offline** de tours con service worker
-- 🏠 **Instalable** como PWA
+```
+App monta → initialize() → supabase.auth.getSession()
+  ├── sesión existe → setea user en authStore → isAuthenticated: true
+  └── sin sesión → isAuthenticated: false → redirect /login
 
-## Getting Started
+LoginScreen
+  ├── email/password → supabase.auth.signInWithPassword()
+  ├── Google → supabase.auth.signInWithOAuth({ provider: 'google' })
+  └── Apple → supabase.auth.signInWithOAuth({ provider: 'apple' })
+
+onAuthStateChange → actualiza authStore automáticamente
+```
+
+### 2. Routing
+
+```
+<Routes>
+  /              → SplashRoute  (requiere auth, sino → /login)
+  /login         → LoginRoute   (si ya auth, → redirect)
+  /player?stopId=X → PlayerRoute (requiere auth)
+  /tour/:slug    → TourRoute    (QR code: /tour/sacsayhuaman)
+  *              → NotFoundScreen
+</Routes>
+```
+
+### 3. Datos
+
+```
+Supabase PostgreSQL
+  ┌─ tours (slug, name, description)
+  ├─ tour_stops (lat, lng, radius, audioSrc, order)
+  └─ user_progress (user_id, stop_id, completed)
+
+App.tsx
+  ├─ SACSAYHUAMAN_TOUR (types.ts) ← 9 stops con coordenadas reales
+  └─ POIS (pois.ts) ← 16 POIs (9 tour + 7 culturales)
+
+tourStore
+  ├─ tour, stops, currentStopIndex
+  ├─ isDownloaded, downloadProgress
+  └─ completedIds (Set<string>)
+```
+
+### 4. Geolocalización → Audio
+
+```
+useGeolocation hook (PlayerRoute, LocationModal)
+  │
+  ├─ watchPosition (high accuracy, cada 5s)
+  ├─ Haversine a cada stop (≤25m = en rango)
+  │
+  ├─ PlayerRoute: onEnterStop(id) → setNearbyStop → banner "Estás cerca de X"
+  │   └─ [Reproducir] → navigate(/player?stopId=X) → AudioPlayer
+  │
+  └─ LocationModal: setPosition → TourMap actualiza userMarker + accuracyCircle
+      └─ findActivePoi() → geofence detection (arrived ≤ geofenceRadius)
+```
+
+### 5. Mapa 3D (TourMap)
+
+```
+Mapbox GL JS
+  ├─ style: satellite-streets-v12 (satélite real)
+  ├─ pitch: 45° → perspectiva 3D
+  ├─ fill-extrusion layer: 16 polígonos extruidos (25m² c/u)
+  │   └─ color y altura por categoría del POI
+  ├─ marcadores DOM (click → flyTo zoom:17 pitch:60)
+  ├─ popup HTML con nombre, descripción, botón "Ver en 3D"
+  ├─ userMarker azul + accuracyCircle (GPS real o simulado)
+  └─ NavigationControl
+```
+
+### 6. Visor 3D (SiteViewer3D)
+
+```
+Three.js + R3F + Drei
+  │
+  ├─ Canvas (shadows, antialias, fov:40)
+  ├─ Iluminación: ambient + 2× directional + hemisphere
+  ├─ Modelo procedural por categoría:
+  │   ├─ templo     → pirámide escalonada + columnas trapezoidales
+  │   ├─ fortaleza  → muros zigzag + torres circulares
+  │   ├─ santuario  → roca deformada + altar
+  │   ├─ mirador    → torre escalonada + barandas
+  │   ├─ plaza      → plataforma + mojones
+  │   └─ tour_stop  → cono marcador + cartel
+  ├─ Hotspots: anillos pulsantes + labels HTML + tooltips
+  ├─ OrbitControls (auto-rotate, damping, sin pan)
+  └─ AudioBar: mini reproductor integrado
+```
+
+### 7. PWA — Service Worker
+
+```
+vite-plugin-pwa (Workbox, registerType: autoUpdate)
+  ├─ precache: JS, CSS, HTML
+  ├─ runtimeCaching:
+  │   ├─ images (Unsplash) → StaleWhileRevalidate (30d)
+  │   ├─ audio MP3       → CacheFirst (90d)
+  │   └─ API calls       → NetworkFirst (5s timeout)
+  └─ manifest: name, icons, theme_color (#A0522D), standalone
+```
+
+### 8. Offline Download
+
+```
+downloadWorker.ts (Web Worker)
+  ├─ postMessage({ type: 'download', urls, cacheName })
+  ├─ fetch + Cache API por cada URL
+  ├─ postMessage progreso (current, total, percent)
+  └─ soporta cancelación
+```
+
+---
+
+## Estructura de carpetas
+
+```
+src/
+├── app/
+│   ├── components/
+│   │   ├── atoms/          # ErrorBoundary, PageTransition, OfflineToast
+│   │   ├── organisms/      # AudioPlayer, TourMap, ChatPanel, LocationModal
+│   │   └── ui/             # shadcn/ui (Button, Input, etc.)
+│   ├── screens/            # LoginScreen, SplashScreen, NotFoundScreen
+│   └── App.tsx             # Router + providers
+├── hooks/                  # useGeolocation
+├── lib/
+│   ├── map/                # pois, geofence, siteModels, hotspots
+│   └── tour/               # types (TourStop, SACSAYHUAMAN_TOUR)
+├── services/               # tourData, tourService
+├── stores/                 # authStore, tourStore, locationStore, mapStore, chatStore
+├── styles/                 # index.css, tailwind.css, theme.css
+└── workers/                # downloadWorker
+```
+
+---
+
+## Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Entorno
-
-Crear un archivo `.env` en la raíz:
+### Variables de entorno (.env)
 
 ```env
-VITE_MAPBOX_TOKEN=tu_token
-VITE_GEMINI_API_KEY=tu_api_key
-VITE_SUPABASE_URL=tu_url
-VITE_SUPABASE_ANON_KEY=tu_key
+VITE_MAPBOX_TOKEN=pk.xxx
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJxxx
 ```
 
-Sin API keys, la app funciona en modo demo:
-- Chat opera offline con contenido local
-- Mapa muestra fallback
-- Audio usa archivos locales en `src/public/voices/`
+La app requiere Supabase Auth y Mapbox. Sin token de Mapbox, el mapa muestra un fallback informativo.
 
-## Estructura
+### Base de datos
 
-```
-src/
-├── app/
-│   ├── components/
-│   │   ├── atoms/        # Componentes base (ErrorBoundary, PageTransition, etc.)
-│   │   ├── organisms/    # Componentes de negocio (AudioPlayer, ChatPanel, TourMap, etc.)
-│   │   └── ui/           # shadcn/ui
-│   └── screens/          # Pantallas (Splash, Login, Player, DesignSystem)
-├── hooks/                # Custom hooks (useGeolocation)
-├── lib/                  # Lógica de dominio (chat, map, tour types)
-├── services/             # Servicios
-├── stores/               # Zustand stores (auth, chat, location, map, tour, audio)
-├── styles/               # CSS (Tailwind v4, theme tokens)
-└── workers/              # Web Workers
-```
+Ejecutar `docs/supabase-schema.sql` en el SQL Editor de Supabase para crear tablas, datos semilla y políticas RLS. Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
 
-## Demo Mode
+---
 
-La app arranca con `isAuthenticated: true` y un usuario demo, permitiendo navegar todo el flujo sin login.
+## Stores
+
+| Store | Estado |
+|-------|--------|
+| `authStore` | user, isAuthenticated, login/signUp/socialLogin/logout |
+| `tourStore` | tour, stops, currentStopIndex, isDownloaded, completedIds |
+| `locationStore` | position (lat/lng/accuracy), isWatching, activeStopId |
+| `mapStore` | isReady, activePoi, showPopup, show3DViewer, flyToPoi |
+| `chatStore` | isOpen, messages, toggle/send/reset |

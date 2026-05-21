@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { Navigation, Radio, MapPin, Box, Crosshair } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -22,6 +23,7 @@ interface LocationModalProps {
 }
 
 export function LocationModal({ stops, onClose }: LocationModalProps) {
+  const { t } = useTranslation();
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [userStartedGeo, setUserStartedGeo] = useState(false);
   useGeolocation({ enabled: geoEnabled, stops });
@@ -71,7 +73,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Mapa del tour"
+      aria-label={t('location.title')}
     >
       <motion.div
         initial={{ y: '100%' }}
@@ -90,12 +92,12 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
             <div className="flex items-center gap-2">
               <Navigation className="w-5 h-5 text-[#E6FF00]" />
               <h3 className="text-lg font-semibold text-white">
-                Mapa del tour
+                {t('location.title')}
               </h3>
             </div>
             {position && (
               <span className="text-xs bg-[#AFFF00]/10 text-[#AFFF00] px-2 py-1 rounded-full flex items-center gap-1 border border-[#AFFF00]/20">
-                <Radio className="w-3 h-3" /> GPS activo
+                <Radio className="w-3 h-3" /> {t('location.gpsActive')}
               </span>
             )}
           </div>
@@ -103,7 +105,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
 
         {/* Map */}
         <div className="flex-1 min-h-0 relative">
-          <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-[#0E0E0E]"><p className="text-sm text-[#6E6E6E]">Cargando mapa...</p></div>}>
+          <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-[#0E0E0E]"><p className="text-sm text-[#6E6E6E]">{t('loadMap.loading')}</p></div>}>
             <TourMap className="w-full h-full" />
           </Suspense>
 
@@ -114,20 +116,20 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-[#E6FF00] flex-shrink-0" />
                   <p className="text-sm text-white">
-                    Activa tu ubicación para verte en el mapa
+                    {t('location.enableGps')}
                   </p>
                 </div>
                 <button
                   onClick={handleEnableGeo}
                   className="w-full py-2.5 rounded-full bg-[#E6FF00] text-[#111111] text-sm font-semibold active:scale-[0.97] transition-all"
                 >
-                  Activar GPS
+                  {t('location.activateGps')}
                 </button>
 
                 <div className="border-t border-[#2C2C2C] pt-3">
                   <p className="text-xs text-[#6E6E6E] mb-2 flex items-center gap-1">
                     <Crosshair className="w-3 h-3" />
-                    O simula una ubicación de prueba:
+                    {t('location.orSimulate')}
                   </p>
                   <button
                     onClick={handleSimulate}
@@ -138,7 +140,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                   {nearestStopToSimulated && (
                     <p className={`text-xs mt-2 text-center ${nearestStopToSimulated.dist <= 25 ? 'text-[#AFFF00] font-medium' : 'text-[#FFB84D]'}`}>
                       → {nearestStopToSimulated.stop.name} ({Math.round(nearestStopToSimulated.dist)}m)
-                      {nearestStopToSimulated.dist <= 25 ? ' ✓ EN RANGO' : ' (fuera de rango)'}
+                      {nearestStopToSimulated.dist <= 25 ? ` ✓ ${t('location.inRange')}` : ` (${t('location.outOfRange')})`}
                     </p>
                   )}
                 </div>
@@ -197,7 +199,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
         {/* Stops + POIs legend */}
         <div className="flex-shrink-0 px-5 py-4 border-t border-[#2C2C2C] overflow-y-auto max-h-[30vh]">
           <h4 className="text-sm font-medium text-[#6E6E6E] uppercase tracking-wide mb-3">
-            Paradas del tour ({stops.length})
+            {t('location.tourStops')} ({stops.length})
           </h4>
           <div className="space-y-2">
             {stops.map((stop) => {
@@ -241,7 +243,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
           </div>
 
           <h4 className="text-sm font-medium text-[#6E6E6E] uppercase tracking-wide mt-4 mb-3">
-            Puntos de interés
+            {t('location.pois')}
           </h4>
           <div className="space-y-2">
             {POIS.filter((p) => p.category !== 'tour_stop').map((poi) => {

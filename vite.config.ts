@@ -97,6 +97,7 @@ export default defineConfig({
     },
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],
+  build: { target: 'es2022' },
   publicDir: 'src/public',
   worker: {
     format: 'es',

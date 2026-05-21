@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Share, Smartphone } from 'lucide-react';
 
 interface AddToHomeScreenProps {
@@ -6,8 +7,10 @@ interface AddToHomeScreenProps {
 }
 
 export function AddToHomeScreen({ onClose, onSkip }: AddToHomeScreenProps) {
+  const { t } = useTranslation();
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50" role="dialog" aria-modal="true" aria-label="Agregar a pantalla de inicio">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50" role="dialog" aria-modal="true" aria-label={t('pwa.aria')}>
       <div className="bg-[#171717] rounded-[30px] p-8 max-w-sm w-full border border-[#2C2C2C] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         <div className="flex justify-center mb-6">
           <div className="relative">
@@ -25,10 +28,10 @@ export function AddToHomeScreen({ onClose, onSkip }: AddToHomeScreenProps) {
         </div>
 
         <h3 className="text-[22px] font-semibold text-white text-center mb-3 leading-tight">
-          Guardá Rimay en tu pantalla de inicio
+          {t('pwa.title')}
         </h3>
         <p className="text-center text-[#6E6E6E] text-[15px] mb-6">
-          Accedé sin abrir el navegador. Tu tour queda guardado.
+          {t('pwa.subtitle')}
         </p>
 
         <div className="bg-[#1E1E1E] rounded-[22px] p-4 mb-6 border border-[#2C2C2C]">
@@ -38,11 +41,11 @@ export function AddToHomeScreen({ onClose, onSkip }: AddToHomeScreenProps) {
             </div>
             <div className="flex-1">
               <p className="text-sm text-white">
-                Toca{' '}
+                {t('pwa.iosInstructions')}{' '}
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#171717] rounded border border-[#2C2C2C]">
                   <Share className="w-3 h-3 text-white" />
-                </span>{' '}
-                → "Agregar a pantalla de inicio"
+                </span>
+                {' '}{t('pwa.addToHome')}
               </p>
             </div>
           </div>
@@ -52,14 +55,14 @@ export function AddToHomeScreen({ onClose, onSkip }: AddToHomeScreenProps) {
           onClick={onClose}
           className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all mb-3"
         >
-          Entendido
+          {t('pwa.gotIt')}
         </button>
 
         <button
           onClick={onSkip}
           className="w-full py-2 text-[#6E6E6E] hover:text-white transition-colors"
         >
-          Ahora no
+          {t('pwa.notNow')}
         </button>
       </div>
     </div>

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Wifi, WifiOff } from 'lucide-react';
 
 export function OfflineToast() {
+  const { t } = useTranslation();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [show, setShow] = useState(false);
   const [message, setMessage] = useState('');
@@ -9,14 +11,14 @@ export function OfflineToast() {
   useEffect(() => {
     const goOnline = () => {
       setIsOnline(true);
-      setMessage('Conexión restablecida');
+      setMessage(t('offline.restored'));
       setShow(true);
       setTimeout(() => setShow(false), 3000);
     };
 
     const goOffline = () => {
       setIsOnline(false);
-      setMessage('Sin conexión — modo offline');
+      setMessage(t('offline.mode'));
       setShow(true);
     };
 
@@ -27,7 +29,7 @@ export function OfflineToast() {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
     };
-  }, []);
+  }, [t]);
 
   if (!show) return null;
 
