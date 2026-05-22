@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams, useLocation } from 'react-router';
 import { AnimatePresence } from 'motion/react';
+import { LogOut, AlertTriangle, RefreshCw } from 'lucide-react';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
@@ -9,7 +10,7 @@ import { TourStopsList, type TourStopDisplay } from './components/organisms/Tour
 import { LocationModal } from './components/organisms/LocationModal';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
-import { DebugLocationPanel } from './components/organisms/DebugLocationPanel';
+
 import { ChatButton } from './components/organisms/ChatButton';
 import { ChatPanel } from './components/organisms/ChatPanel';
 import { ErrorBoundary } from './components/atoms/ErrorBoundary';
@@ -20,11 +21,22 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
-import { SACSAYHUAMAN_TOUR, toDisplayStops } from '@/lib/tour/types';
+import { toDisplayStops } from '@/lib/tour/types';
+import { fetchTourBySlug } from '@/services/tourService';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './components/ui/alert-dialog';
 
 function useTourStops() {
   const navigate = useNavigate();
-  const tour = useTourStore((s) => s.tour) ?? SACSAYHUAMAN_TOUR;
+  const tour = useTourStore((s) => s.tour)!;
   const completedIds = useTourStore((s) => s.completedIds);
   const [currentStopId, setCurrentStopId] = useState(tour.stops[2]?.id ?? tour.stops[0]?.id);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -121,6 +133,7 @@ function SplashRoute() {
         currentStopId={t.currentStop.id}
         onSelectStop={t.handleSelectStop}
         onShowLocation={() => t.setShowLocationModal(true)}
+        onShowAddToHome={() => t.setShowAddToHome(true)}
       />
 
       <AnimatePresence>
@@ -209,7 +222,6 @@ function PlayerRoute() {
         )}
       </AnimatePresence>
 
-      <DebugLocationPanel stops={t.stops} onEnterStop={t.handleSelectStop} currentStopId={currentStop.id} />
     </PageTransition>
   );
 }
@@ -234,6 +246,11 @@ function LoginRoute() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const signUp = useAuthStore((s) => s.signUp);
+  const clearError = useAuthStore((s) => s.clearError);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [showConfirmEmail, setShowConfirmEmail] = useState(false);
+  const [signUpEmail, setSignUpEmail] = useState('');
 
   const redirect = searchParams.get('redirect') ?? '/';
 
@@ -241,28 +258,148 @@ function LoginRoute() {
     return <Navigate to={redirect} replace />;
   }
 
+  if (showConfirmEmail) {
+    return (
+      <div className="min-h-screen w-full bg-[#0E0E0E] flex flex-col items-center justify-center px-6">
+        <div className="bg-[#171717] rounded-[30px] p-8 max-w-sm w-full border border-[#2C2C2C] text-center">
+          <div className="w-16 h-16 rounded-full bg-[#E6FF00]/20 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-8 h-8 text-[#E6FF00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 className="text-[22px] font-semibold text-white mb-2">Revisá tu email</h2>
+          <p className="text-[#6E6E6E] text-[15px] mb-2">
+            Te enviamos un link de confirmación a
+          </p>
+          <p className="text-white font-medium text-[15px] mb-6">{signUpEmail}</p>
+          <button
+            onClick={() => {
+              setShowConfirmEmail(false);
+              setIsSignUpMode(false);
+              clearError();
+            }}
+            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] active:scale-[0.96] transition-all"
+          >
+            Volver a iniciar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <LoginScreen
       onLogin={() => navigate(redirect, { replace: true })}
-      onSignUp={() => {}}
+      onSignUp={async (email: string, password: string) => {
+        await signUp(email, password);
+        setSignUpEmail(email);
+        setShowConfirmEmail(true);
+      }}
+      isSignUpMode={isSignUpMode}
+      onToggleMode={() => {
+        setIsSignUpMode(!isSignUpMode);
+        clearError();
+      }}
     />
+  );
+}
+
+function LogoutButton() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  if (!isAuthenticated) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="absolute top-4 right-4 z-40 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        aria-label="Cerrar sesión"
+      >
+        <LogOut className="w-5 h-5" />
+      </button>
+
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cerrar sesión</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que querés cerrar sesión?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await logout();
+                navigate('/login', { replace: true });
+              }}
+            >
+              Cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
 export default function App() {
   const location = useLocation();
   const initializeAuth = useAuthStore((s) => s.initialize);
-  const isLoading = useAuthStore((s) => s.isLoading);
+  const isAuthLoading = useAuthStore((s) => s.isLoading);
+  const setTour = useTourStore((s) => s.setTour);
+  const tour = useTourStore((s) => s.tour);
+  const [isTourLoading, setIsTourLoading] = useState(!tour);
+  const [tourError, setTourError] = useState<string | null>(null);
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (tour) return;
+    fetchTourBySlug('sacsayhuaman')
+      .then(setTour)
+      .catch((err) => setTourError(err.message))
+      .finally(() => setIsTourLoading(false));
+  }, [tour, setTour]);
+
+  const retry = useCallback(() => {
+    setIsTourLoading(true);
+    setTourError(null);
+    fetchTourBySlug('sacsayhuaman')
+      .then(setTour)
+      .catch((err) => setTourError(err.message))
+      .finally(() => setIsTourLoading(false));
+  }, [setTour]);
+
+  if (isAuthLoading || isTourLoading) {
     return (
       <div className="size-full relative dark">
         <div className="h-full w-full max-w-md mx-auto relative bg-background flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-[var(--terracotta)]/30 border-t-[var(--terracotta)] rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (tourError) {
+    return (
+      <div className="size-full relative dark">
+        <div className="h-full w-full max-w-md mx-auto relative bg-background flex flex-col items-center justify-center gap-4 px-6">
+          <AlertTriangle className="w-12 h-12 text-[var(--terracotta)]" />
+          <p className="text-white/60 text-center text-[15px]">{tourError}</p>
+          <button
+            onClick={retry}
+            className="h-12 px-6 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] flex items-center gap-2 active:scale-[0.96] transition-all"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reintentar
+          </button>
         </div>
       </div>
     );
@@ -273,6 +410,7 @@ export default function App() {
       <div className="size-full relative dark">
         <div className="h-full w-full max-w-md mx-auto relative bg-background text-foreground overflow-hidden">
           <OfflineToast />
+          <LogoutButton />
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<SplashRoute />} />

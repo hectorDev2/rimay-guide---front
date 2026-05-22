@@ -1,24 +1,42 @@
-import { SACSAYHUAMAN_TOUR } from '@/lib/tour/types';
-import type { TourStop } from '@/lib/tour/types';
+import { supabase } from '@/lib/supabaseClient';
+import type { Tour } from '@/lib/tour/types';
 
-export async function fetchTourBySlug(slug: string): Promise<typeof SACSAYHUAMAN_TOUR> {
-  await delay(300);
-  if (slug === SACSAYHUAMAN_TOUR.slug) return SACSAYHUAMAN_TOUR;
-  throw new Error(`Tour no encontrado: ${slug}`);
+export async function fetchTourBySlug(slug: string): Promise<Tour> {
+  const { data: tour, error } = await supabase
+    .from('tours')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !tour) throw new Error(`Tour no encontrado: ${slug}`);
+
+  const { data: stops, error: stopsError } = await supabase
+    .from('tour_stops')
+    .select('*')
+    .eq('tour_id', tour.id)
+    .order('order');
+
+  if (stopsError) throw new Error(`Error al cargar paradas: ${stopsError.message}`);
+
+  return {
+    id: tour.id,
+    slug: tour.slug,
+    name: tour.name,
+    description: tour.description,
+    totalDurationMinutes: tour.total_duration_minutes,
+    stops: stops.map((s) => ({
+      id: s.id,
+      order: s.order,
+      name: s.name,
+      latitude: Number(s.latitude),
+      longitude: Number(s.longitude),
+      radiusMeters: s.radius_meters,
+      audioSrc: s.audio_src,
+      durationSeconds: s.duration_seconds,
+      description: s.description,
+      culturalContext: (s as any).cultural_context ?? '',
+    })),
+  };
 }
 
-export async function fetchTourStops(tourId: string): Promise<TourStop[]> {
-  await delay(200);
-  if (tourId === SACSAYHUAMAN_TOUR.id) return SACSAYHUAMAN_TOUR.stops;
-  throw new Error(`Stops no encontrados para: ${tourId}`);
-}
 
-export function getAudioUrls(stops: TourStop[]): string[] {
-  return stops
-    .filter((s) => s.audioSrc !== '/audio/placeholder.mp3')
-    .map((s) => s.audioSrc);
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}

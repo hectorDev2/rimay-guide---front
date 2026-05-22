@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, MapPin, ChevronDown } from 'lucide-react';
+import { Play, MapPin, ChevronDown, Smartphone } from 'lucide-react';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
 import { LanguageSwitcher } from '../components/atoms/LanguageSwitcher';
 import type { TourStopDisplay } from '../components/organisms/TourStopsList';
@@ -11,6 +11,7 @@ interface SplashScreenProps {
   currentStopId: string;
   onSelectStop: (id: string) => void;
   onShowLocation: () => void;
+  onShowAddToHome: () => void;
 }
 
 export function SplashScreen({
@@ -19,6 +20,7 @@ export function SplashScreen({
   currentStopId,
   onSelectStop,
   onShowLocation,
+  onShowAddToHome,
 }: SplashScreenProps) {
   const { t } = useTranslation();
   const stopsRef = useRef<HTMLDivElement>(null);
@@ -93,6 +95,14 @@ export function SplashScreen({
             >
               <ChevronDown className="w-5 h-5" />
               {t('splash.viewStops')}
+            </button>
+
+            <button
+              onClick={onShowAddToHome}
+              className="w-full text-center text-[13px] text-[#6E6E6E] hover:text-white transition-colors flex items-center justify-center gap-1.5 py-1"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              {t('pwa.title')}
             </button>
           </div>
 

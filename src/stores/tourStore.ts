@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Tour } from '@/lib/tour/types';
 
 interface TourState {
@@ -17,40 +18,50 @@ interface TourState {
   reset: () => void;
 }
 
-export const useTourStore = create<TourState>((set, get) => ({
-  tour: null,
-  currentStopIndex: 0,
-  completedIds: [],
-  isDownloaded: false,
-  downloadProgress: 0,
-  isDownloading: false,
-
-  setTour: (tour) => set({ tour, currentStopIndex: 0 }),
-
-  setCurrentStopIndex: (index) => set({ currentStopIndex: index }),
-
-  markStopCompleted: (stopId) => {
-    const id = stopId;
-    set((s) => ({
-      completedIds: s.completedIds.includes(id)
-        ? s.completedIds
-        : [...s.completedIds, id],
-    }));
-  },
-
-  setDownloaded: (value) => set({ isDownloaded: value }),
-
-  setDownloadProgress: (progress) => set({ downloadProgress: progress }),
-
-  setDownloading: (value) => set({ isDownloading: value }),
-
-  reset: () =>
-    set({
+export const useTourStore = create<TourState>()(
+  persist(
+    (set, _get) => ({
       tour: null,
       currentStopIndex: 0,
       completedIds: [],
       isDownloaded: false,
       downloadProgress: 0,
       isDownloading: false,
+
+      setTour: (tour) => set({ tour, currentStopIndex: 0 }),
+
+      setCurrentStopIndex: (index) => set({ currentStopIndex: index }),
+
+      markStopCompleted: (stopId) => {
+        set((s) => ({
+          completedIds: s.completedIds.includes(stopId)
+            ? s.completedIds
+            : [...s.completedIds, stopId],
+        }));
+      },
+
+      setDownloaded: (value) => set({ isDownloaded: value }),
+
+      setDownloadProgress: (progress) => set({ downloadProgress: progress }),
+
+      setDownloading: (value) => set({ isDownloading: value }),
+
+      reset: () =>
+        set({
+          tour: null,
+          currentStopIndex: 0,
+          completedIds: [],
+          isDownloaded: false,
+          downloadProgress: 0,
+          isDownloading: false,
+        }),
     }),
-}));
+    {
+      name: 'rimay-tour',
+      partialize: (state) => ({
+        completedIds: state.completedIds,
+        isDownloaded: state.isDownloaded,
+      }),
+    },
+  ),
+);

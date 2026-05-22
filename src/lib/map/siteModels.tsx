@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useGLTF } from '@react-three/drei';
 
 export interface SiteModelProps {
   color: string;
@@ -274,6 +275,32 @@ export function TourStopModel({ color, height }: SiteModelProps) {
   );
 }
 
+function QoricanchaModel(_props: SiteModelProps) {
+  const { scene } = useGLTF('/model_qoricancha.glb');
+
+  const cloned = useMemo(() => scene.clone(), [scene]);
+
+  const box = useMemo(() => {
+    const b = new THREE.Box3().setFromObject(cloned);
+    const size = b.getSize(new THREE.Vector3());
+    const center = b.getCenter(new THREE.Vector3());
+    return { size, center };
+  }, [cloned]);
+
+  const maxDim = Math.max(box.size.x, box.size.y, box.size.z);
+  const scale = maxDim > 0 ? 2.5 / maxDim : 1;
+
+  return (
+    <group>
+      <primitive
+        object={cloned}
+        position={[0, -box.center.y * scale, 0]}
+        scale={scale}
+      />
+    </group>
+  );
+}
+
 const MODEL_COMPONENTS: Record<string, React.ComponentType<SiteModelProps>> = {
   templo: TempleModel,
   fortaleza: FortressModel,
@@ -285,6 +312,11 @@ const MODEL_COMPONENTS: Record<string, React.ComponentType<SiteModelProps>> = {
   tour_stop: TourStopModel,
 };
 
-export function getSiteModel(category: string): React.ComponentType<SiteModelProps> {
+const POI_OVERRIDES: Record<string, React.ComponentType<SiteModelProps>> = {
+  coricancha: QoricanchaModel,
+};
+
+export function getSiteModel(category: string, poiId?: string): React.ComponentType<SiteModelProps> {
+  if (poiId && POI_OVERRIDES[poiId]) return POI_OVERRIDES[poiId];
   return MODEL_COMPONENTS[category] ?? TourStopModel;
 }

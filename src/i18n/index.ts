@@ -1,24 +1,31 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { fetchTranslations } from '@/services/translationService';
+import { FALLBACK_ES, FALLBACK_EN } from './fallback';
 
-i18n.use(initReactI18next);
+const BUNDLES: Record<string, Record<string, string>> = {
+  es: FALLBACK_ES,
+  en: FALLBACK_EN,
+};
 
 function detectLang(): string {
   if (typeof window === 'undefined') return 'es';
   const saved = localStorage.getItem('rimay-lang');
   if (saved) return saved;
-  return navigator.language.split('-')[0];
+  const nav = navigator.language.split('-')[0];
+  return nav === 'en' ? 'en' : 'es';
 }
 
 async function loadLang(lang: string) {
-  const bundle = await fetchTranslations(lang);
-  const flat: Record<string, string> = {};
-  for (const [ns, keys] of Object.entries(bundle)) {
+  const flat: Record<string, string> = { ...(BUNDLES[lang] ?? FALLBACK_ES) };
+
+  const remote = await fetchTranslations(lang);
+  for (const [ns, keys] of Object.entries(remote)) {
     for (const [key, value] of Object.entries(keys)) {
       flat[`${ns}.${key}`] = value;
     }
   }
+
   if (!i18n.isInitialized) {
     i18n.init({
       resources: { [lang]: { translation: flat } },

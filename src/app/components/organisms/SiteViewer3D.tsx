@@ -74,7 +74,7 @@ function Hotspot3D({ hotspot, color }: { hotspot: HotspotDef; color: string }) {
 }
 
 function Scene({ poi }: { poi: Poi }) {
-  const Model = useMemo(() => getSiteModel(poi.category), [poi.category]);
+  const Model = useMemo(() => getSiteModel(poi.category, poi.id), [poi.category, poi.id]);
   const hotspots = useMemo(() => getHotspotsForPoi(poi.id, poi.category), [poi.id, poi.category]);
   const gridHelper = useMemo(() => {
     const grid = new THREE.GridHelper(10, 20, 'white', 'white');

@@ -40,12 +40,23 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\/tour\/.*\/audio\/.*\.mp3$/i,
+            urlPattern: /\/(voices|audio)\/.*\.mp3$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'audio-cache',
+              cacheName: 'rimay-audio-v1',
               expiration: {
                 maxEntries: 100,
+                maxAgeSeconds: 90 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: /.*\.glb$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'rimay-models-v1',
+              expiration: {
+                maxEntries: 5,
                 maxAgeSeconds: 90 * 24 * 60 * 60,
               },
             },
