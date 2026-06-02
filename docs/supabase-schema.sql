@@ -52,6 +52,91 @@ CREATE TABLE IF NOT EXISTS public.translations (
   UNIQUE(namespace, key, lang)
 );
 
+-- 5. Tabla de sesiones de chat
+CREATE TABLE IF NOT EXISTS public.chat_sessions (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  tour_id    UUID REFERENCES public.tours(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, tour_id)
+);
+
+-- 6. Tabla de mensajes de chat
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+  id         TEXT PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content    TEXT NOT NULL,
+  feedback   INTEGER CHECK (feedback IS NULL OR feedback IN (1, -1)),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id
+  ON public.chat_messages(session_id);
+
+-- RLS: chat_sessions
+DROP POLICY IF EXISTS "Users can view own chat sessions" ON public.chat_sessions;
+CREATE POLICY "Users can view own chat sessions"
+  ON public.chat_sessions FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own chat sessions" ON public.chat_sessions;
+CREATE POLICY "Users can insert own chat sessions"
+  ON public.chat_sessions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own chat sessions" ON public.chat_sessions;
+CREATE POLICY "Users can update own chat sessions"
+  ON public.chat_sessions FOR UPDATE
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own chat sessions" ON public.chat_sessions;
+CREATE POLICY "Users can delete own chat sessions"
+  ON public.chat_sessions FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- RLS: chat_messages
+DROP POLICY IF EXISTS "Users can view own chat messages" ON public.chat_messages;
+CREATE POLICY "Users can view own chat messages"
+  ON public.chat_messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_sessions
+      WHERE id = session_id AND user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can insert own chat messages" ON public.chat_messages;
+CREATE POLICY "Users can insert own chat messages"
+  ON public.chat_messages FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.chat_sessions
+      WHERE id = session_id AND user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can update own chat messages" ON public.chat_messages;
+CREATE POLICY "Users can update own chat messages"
+  ON public.chat_messages FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_sessions
+      WHERE id = session_id AND user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can delete own chat messages" ON public.chat_messages;
+CREATE POLICY "Users can delete own chat messages"
+  ON public.chat_messages FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_sessions
+      WHERE id = session_id AND user_id = auth.uid()
+    )
+  );
+
 -- ============================================================
 -- Datos semilla: Sacsayhuamán
 -- ============================================================

@@ -2,6 +2,7 @@ import { SACSAYHUAMAN_TOUR, formatDuration } from '@/lib/tour/types';
 import { CULTURAL_KNOWLEDGE } from './constants';
 
 interface TourContext {
+  tourId: string;
   currentStopId: string;
   stops: { id: string; name: string; status: string }[];
   transcript?: string;

@@ -21,3 +21,20 @@ export interface TourStopRow {
   duration_seconds: number;
   created_at: string;
 }
+
+export interface ChatSessionRow {
+  id: string;
+  user_id: string;
+  tour_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessageRow {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  feedback: number | null;
+  created_at: string;
+}
