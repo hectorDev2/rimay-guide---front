@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Poi } from '@/lib/map/pois';
 
 interface MapState {
@@ -38,53 +39,71 @@ const DEFAULT_CENTER: [number, number] = [-71.9815, -13.5075];
 const DEFAULT_ZOOM = 15;
 const DEFAULT_PITCH = 45;
 
-export const useMapStore = create<MapState>((set) => ({
-  isReady: false,
-  discoveredPoiIds: new Set<string>(),
-  activePoi: null,
-  showPopup: false,
-  center: DEFAULT_CENTER,
-  zoom: DEFAULT_ZOOM,
-  pitch: DEFAULT_PITCH,
-  pendingFlyToPoiId: null,
-  show3DViewer: false,
-
-  setReady: (ready) => set({ isReady: ready }),
-
-  markDiscovered: (poiId) =>
-    set((s) => {
-      const next = new Set(s.discoveredPoiIds);
-      next.add(poiId);
-      return { discoveredPoiIds: next };
-    }),
-
-  setActivePoi: (poi) => set({ activePoi: poi, showPopup: poi !== null }),
-
-  setShowPopup: (show) => set({ showPopup: show }),
-
-  setShow3DViewer: (show) => set({ show3DViewer: show }),
-
-  setCenter: (center) => set({ center }),
-  setZoom: (zoom) => set({ zoom }),
-  setPitch: (pitch) => set({ pitch }),
-
-  flyToPoi: (poi) =>
-    set({
-      pendingFlyToPoiId: poi.id,
-      activePoi: poi,
-      showPopup: true,
-    }),
-
-  clearPendingFlyTo: () => set({ pendingFlyToPoiId: null }),
-
-  resetMap: () =>
-    set({
+export const useMapStore = create<MapState>()(
+  persist(
+    (set) => ({
+      isReady: false,
+      discoveredPoiIds: new Set<string>(),
       activePoi: null,
       showPopup: false,
-      show3DViewer: false,
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       pitch: DEFAULT_PITCH,
       pendingFlyToPoiId: null,
+      show3DViewer: false,
+
+      setReady: (ready) => set({ isReady: ready }),
+
+      markDiscovered: (poiId) =>
+        set((s) => {
+          const next = new Set(s.discoveredPoiIds);
+          next.add(poiId);
+          return { discoveredPoiIds: next };
+        }),
+
+      setActivePoi: (poi) => set({ activePoi: poi, showPopup: poi !== null }),
+
+      setShowPopup: (show) => set({ showPopup: show }),
+
+      setShow3DViewer: (show) => set({ show3DViewer: show }),
+
+      setCenter: (center) => set({ center }),
+      setZoom: (zoom) => set({ zoom }),
+      setPitch: (pitch) => set({ pitch }),
+
+      flyToPoi: (poi) =>
+        set({
+          pendingFlyToPoiId: poi.id,
+          activePoi: poi,
+          showPopup: true,
+        }),
+
+      clearPendingFlyTo: () => set({ pendingFlyToPoiId: null }),
+
+      resetMap: () =>
+        set({
+          activePoi: null,
+          showPopup: false,
+          show3DViewer: false,
+          center: DEFAULT_CENTER,
+          zoom: DEFAULT_ZOOM,
+          pitch: DEFAULT_PITCH,
+          pendingFlyToPoiId: null,
+        }),
     }),
-}));
+    {
+      name: 'rimay-map',
+      partialize: (state) => ({
+        discoveredPoiIds: Array.from(state.discoveredPoiIds),
+        center: state.center,
+        zoom: state.zoom,
+        pitch: state.pitch,
+      }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...persisted,
+        discoveredPoiIds: new Set((persisted as any).discoveredPoiIds ?? []),
+      }),
+    },
+  ),
+);

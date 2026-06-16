@@ -7,6 +7,7 @@ import { useLocationStore } from '@/stores/locationStore';
 import { useMapStore } from '@/stores/mapStore';
 import { POIS } from '@/lib/map/pois';
 import { SiteViewer3D } from './SiteViewer3D';
+import { LocationModalSkeleton } from '@/app/components/atoms/Skeleton';
 import type { TourStopDisplay } from './TourStopsList';
 
 const TourMap = lazy(() => import('./TourMap').then((m) => ({ default: m.TourMap })));
@@ -31,6 +32,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
   const position = useLocationStore((s) => s.position);
   const setPosition = useLocationStore((s) => s.setPosition);
   const geoError = useLocationStore((s) => s.error);
+  const nearbyStop = useLocationStore((s) => s.nearbyStop);
   const activePoi = useMapStore((s) => s.activePoi);
   const showPopup = useMapStore((s) => s.showPopup);
   const setShowPopup = useMapStore((s) => s.setShowPopup);
@@ -95,9 +97,15 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                 {t('location.title')}
               </h3>
             </div>
-            {position && (
-              <span className="text-xs bg-[#AFFF00]/10 text-[#AFFF00] px-2 py-1 rounded-full flex items-center gap-1 border border-[#AFFF00]/20">
-                <Radio className="w-3 h-3" /> {t('location.gpsActive')}
+            {position ? (
+              <span className="text-xs bg-[#4A7FA5]/15 text-[#4A7FA5] px-3 py-1 rounded-full flex items-center gap-1.5 border border-[#4A7FA5]/20 font-medium">
+                <span className="w-2 h-2 rounded-full bg-[#4A7FA5] animate-pulse shadow-[0_0_6px_rgba(74,127,165,0.6)]" />
+                GPS activo · {position.accuracy.toFixed(0)}m precisión
+              </span>
+            ) : (
+              <span className="text-xs bg-[#2C2C2C]/50 text-[#A6A6A6] px-3 py-1 rounded-full flex items-center gap-1.5 border border-[#2C2C2C]">
+                <span className="w-2 h-2 rounded-full bg-[#6E6E6E]" />
+                GPS inactivo — tocá para activar
               </span>
             )}
           </div>
@@ -105,7 +113,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
 
         {/* Map */}
         <div className="flex-1 min-h-0 relative">
-          <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-[#0E0E0E]"><p className="text-sm text-[#6E6E6E]">{t('loadMap.loading')}</p></div>}>
+          <Suspense fallback={<LocationModalSkeleton />}>
             <TourMap className="w-full h-full" />
           </Suspense>
 
@@ -152,7 +160,26 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
             </div>
           )}
 
-          {/* Active POI popup close button (overlay, not Mapbox popup) */}
+            {/* Nearby stop alert */}
+            {nearbyStop && geoEnabled && !activePoi && (
+              <div className="absolute top-4 left-4 right-4 z-[1000]">
+                <div className="bg-[#171717]/95 backdrop-blur-[20px] rounded-[22px] px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.35)] border border-[#D4A843]/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#D4A843] animate-pulse shadow-[0_0_8px_rgba(212,168,67,0.5)] flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-white font-medium">
+                        Cerca de {nearbyStop.name}
+                      </p>
+                      <p className="text-xs text-[#A6A6A6]">
+                        {nearbyStop.distance}m — activá el GPS para avanzar automáticamente
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active POI popup close button (overlay, not Mapbox popup) */}
           {activePoi && showPopup && (
             <div className="absolute top-4 left-4 right-4 z-[1000]">
               <div className="bg-[#171717]/95 backdrop-blur-[20px] rounded-[22px] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] border border-[#2C2C2C]">

@@ -8,7 +8,7 @@ import { getSiteModel } from '@/lib/map/siteModels';
 import { getHotspotsForPoi } from '@/lib/map/hotspots';
 import type { HotspotDef } from '@/lib/map/hotspots';
 import type { Poi } from '@/lib/map/pois';
-import { SACSAYHUAMAN_TOUR } from '@/lib/tour/types';
+import { useTourStore } from '@/stores/tourStore';
 
 interface SiteViewer3DProps {
   poi: Poi | null;
@@ -201,7 +201,8 @@ function AudioBar({ audioSrc }: { audioSrc: string }) {
 export function SiteViewer3D({ poi, open, onClose }: SiteViewer3DProps) {
   const audioSrc = useMemo(() => {
     if (!poi?.tourStopId) return null;
-    const stop = SACSAYHUAMAN_TOUR.stops.find((s) => s.id === poi.tourStopId);
+    const tour = useTourStore.getState().tour;
+    const stop = tour?.stops.find((s) => s.id === poi.tourStopId);
     return stop?.audioSrc ?? null;
   }, [poi]);
 

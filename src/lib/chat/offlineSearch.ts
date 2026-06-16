@@ -1,6 +1,6 @@
 import Fuse from 'fuse.js';
 import { KNOWLEDGE_BASE } from './constants';
-import { SACSAYHUAMAN_TOUR } from '@/lib/tour/types';
+import { getHardcodedTour } from '@/lib/tour/data';
 import type { TourContext } from './tourContext';
 
 const fuse = new Fuse(KNOWLEDGE_BASE, {
@@ -30,7 +30,8 @@ function formatResponse(results: string[], query: string): string {
       return '¡De nada! Disfruta tu recorrido por Sacsayhuamán. Si tienes más preguntas, acá estoy. 😊';
     }
 
-    const currentStop = SACSAYHUAMAN_TOUR.stops.find(
+    const tour = getHardcodedTour('sacsayhuaman')!;
+    const currentStop = tour.stops.find(
       (s) => lower.includes(s.name.toLowerCase().slice(0, 6))
     );
     if (currentStop) {

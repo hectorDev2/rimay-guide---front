@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { getHardcodedTour } from '@/lib/tour/data';
 import type { Tour } from '@/lib/tour/types';
 
 export async function fetchTourBySlug(slug: string): Promise<Tour> {
@@ -8,7 +9,11 @@ export async function fetchTourBySlug(slug: string): Promise<Tour> {
     .eq('slug', slug)
     .single();
 
-  if (error || !tour) throw new Error(`Tour no encontrado: ${slug}`);
+  if (error || !tour) {
+    const fallback = getHardcodedTour(slug);
+    if (fallback) return fallback;
+    throw new Error(`Tour no encontrado: ${slug}`);
+  }
 
   const { data: stops, error: stopsError } = await supabase
     .from('tour_stops')
@@ -16,12 +21,17 @@ export async function fetchTourBySlug(slug: string): Promise<Tour> {
     .eq('tour_id', tour.id)
     .order('order');
 
-  if (stopsError) throw new Error(`Error al cargar paradas: ${stopsError.message}`);
+  if (stopsError) {
+    const fallback = getHardcodedTour(slug);
+    if (fallback) return fallback;
+    throw new Error(`Error al cargar paradas: ${stopsError.message}`);
+  }
 
   return {
     id: tour.id,
     slug: tour.slug,
     name: tour.name,
+    nameQuechua: (tour as any).name_quechua ?? undefined,
     description: tour.description,
     totalDurationMinutes: tour.total_duration_minutes,
     stops: stops.map((s) => ({

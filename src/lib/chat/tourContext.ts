@@ -1,4 +1,5 @@
-import { SACSAYHUAMAN_TOUR, formatDuration } from '@/lib/tour/types';
+import { formatDuration } from '@/lib/tour/types';
+import { getHardcodedTour } from '@/lib/tour/data';
 import { CULTURAL_KNOWLEDGE } from './constants';
 
 interface TourContext {
@@ -9,8 +10,9 @@ interface TourContext {
 }
 
 function buildSystemPrompt(context: TourContext): string {
-  const currentStop = SACSAYHUAMAN_TOUR.stops.find((s) => s.id === context.currentStopId);
-  const stopsList = SACSAYHUAMAN_TOUR.stops.map(
+  const tour = getHardcodedTour('sacsayhuaman')!;
+  const currentStop = tour.stops.find((s) => s.id === context.currentStopId);
+  const stopsList = tour.stops.map(
     (s) => `- ${s.name} (${formatDuration(s.durationSeconds)}): ${s.description}`,
   ).join('\n');
 
@@ -24,7 +26,7 @@ INFORMACIÓN DEL TOUR ACTUAL:
 - Tour: Sacsayhuamán — Fortaleza del Sol
 - Ubicación: Cusco, Perú (3,700 msnm)
 - Parada actual: ${currentStop?.name ?? 'No especificada'}
-- Total de paradas: ${SACSAYHUAMAN_TOUR.stops.length}
+- Total de paradas: ${tour.stops.length}
 
 LISTA DE PARADAS:
 ${stopsList}

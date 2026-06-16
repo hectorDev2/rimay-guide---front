@@ -1,4 +1,4 @@
-import { SACSAYHUAMAN_TOUR } from '@/lib/tour/types';
+import { getHardcodedTour } from '@/lib/tour/data';
 
 export interface Poi {
   id: string;
@@ -33,7 +33,8 @@ const STOP_POI_CATEGORIES: Record<string, Poi['category']> = {
 };
 
 function buildStopPois() {
-  return SACSAYHUAMAN_TOUR.stops.map((s) => ({
+  const tour = getHardcodedTour('sacsayhuaman')!;
+  return tour.stops.map((s) => ({
     id: s.id,
     name: s.name,
     description: s.description,

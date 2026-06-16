@@ -11,12 +11,15 @@ import { LocationModal } from './components/organisms/LocationModal';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
 
+import { Drawer } from 'vaul';
 import { ChatButton } from './components/organisms/ChatButton';
 import { ChatPanel } from './components/organisms/ChatPanel';
 import { ErrorBoundary } from './components/atoms/ErrorBoundary';
 import { OfflineToast } from './components/atoms/OfflineToast';
 import { PageTransition } from './components/atoms/PageTransition';
+import { SplashScreenSkeleton, AudioPlayerSkeleton } from './components/atoms/Skeleton';
 import { MiniPlayer } from './components/organisms/MiniPlayer';
+import { TourCompleteScreen } from './components/organisms/TourCompleteScreen';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
@@ -128,7 +131,7 @@ function SplashRoute() {
   return (
     <PageTransition>
       <SplashScreen
-        tourName="Sacsayhuamán — Fortaleza del Sol"
+        tourName={useTourStore.getState().tour?.name ?? 'Sacsayhuamán — Fortaleza del Sol'}
         stops={t.stops}
         currentStopId={t.currentStop.id}
         onSelectStop={t.handleSelectStop}
@@ -172,9 +175,18 @@ function PlayerRoute() {
   const [searchParams] = useSearchParams();
   const paramId = searchParams.get('stopId');
   const t = useTourStops();
+  const completedIds = useTourStore((s) => s.completedIds);
+  const tour = useTourStore((s) => s.tour);
   const [showStopsList, setShowStopsList] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(false);
-  const autoNavRef = useRef(false);
+  const [showTourComplete, setShowTourComplete] = useState(false);
+
+  const totalStops = t.stops.length;
+  const allCompleted = totalStops > 0 && completedIds.length >= totalStops;
+
+  useEffect(() => {
+    if (allCompleted) setShowTourComplete(true);
+  }, [allCompleted]);
 
   const currentStop = paramId
     ? t.stops.find((s) => s.id === paramId) ?? t.currentStop
@@ -196,6 +208,20 @@ function PlayerRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to={`/login?redirect=/player?stopId=${currentStop.id}`} replace />;
+  }
+
+  if (showTourComplete) {
+    return (
+      <PageTransition>
+        <TourCompleteScreen
+          tourName={tour?.name ?? 'Sacsayhuamán'}
+          totalStops={totalStops}
+          totalMinutes={tour?.totalDurationMinutes ?? 45}
+          onExploreMap={() => { navigate('/'); t.setShowLocationModal(true); }}
+          onGoHome={() => navigate('/')}
+        />
+      </PageTransition>
+    );
   }
 
   return (
@@ -233,11 +259,19 @@ function ChatWrapper() {
   return (
     <>
       <ChatButton />
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#0E0E0E]">
-          <ChatPanel onClose={() => toggleChat()} />
-        </div>
-      )}
+      <Drawer.Root open={isOpen} onOpenChange={(o) => { if (!o) toggleChat(); }}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/60 z-40" />
+          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md h-[80vh] rounded-t-[30px] bg-[#0E0E0E] border-t border-[#2C2C2C] flex flex-col">
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1.5 bg-[#2C2C2C] rounded-full" />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ChatPanel onClose={() => toggleChat()} />
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     </>
   );
 }
@@ -377,11 +411,21 @@ export default function App() {
       .finally(() => setIsTourLoading(false));
   }, [setTour]);
 
-  if (isAuthLoading || isTourLoading) {
+  if (isAuthLoading) {
     return (
       <div className="size-full relative dark">
         <div className="h-full w-full max-w-md mx-auto relative bg-background flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-[var(--terracotta)]/30 border-t-[var(--terracotta)] rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isTourLoading) {
+    return (
+      <div className="size-full relative dark">
+        <div className="h-full w-full max-w-md mx-auto relative bg-background">
+          <SplashScreenSkeleton />
         </div>
       </div>
     );

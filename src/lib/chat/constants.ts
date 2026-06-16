@@ -1,4 +1,4 @@
-import { SACSAYHUAMAN_TOUR } from '@/lib/tour/types';
+import { getHardcodedTour } from '@/lib/tour/data';
 
 interface KnowledgeItem {
   id: string;
@@ -9,7 +9,9 @@ interface KnowledgeItem {
   stopId?: string;
 }
 
-const STOP_KNOWLEDGE: KnowledgeItem[] = SACSAYHUAMAN_TOUR.stops.map((s) => ({
+const SACSAY_TOUR = getHardcodedTour('sacsayhuaman')!;
+
+const STOP_KNOWLEDGE: KnowledgeItem[] = SACSAY_TOUR.stops.map((s) => ({
   id: `stop_${s.id}`,
   title: s.name,
   content: `${s.name}: ${s.description}\n\nContexto cultural: ${s.culturalContext}`,

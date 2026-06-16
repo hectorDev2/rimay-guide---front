@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.tours (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug        TEXT UNIQUE NOT NULL,
   name        TEXT NOT NULL,
+  name_quechua TEXT,
   description TEXT,
   total_duration_minutes INTEGER DEFAULT 45,
   created_at  TIMESTAMPTZ DEFAULT now(),
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.tour_stops (
   "order"         INTEGER NOT NULL,
   name            TEXT NOT NULL,
   description     TEXT,
+  cultural_context TEXT,
   latitude        DECIMAL(10, 7) NOT NULL,
   longitude       DECIMAL(10, 7) NOT NULL,
   radius_meters   INTEGER DEFAULT 15,
@@ -150,17 +152,17 @@ VALUES (
   45
 ) ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO public.tour_stops (id, tour_id, "order", name, description, latitude, longitude, radius_meters, audio_src, duration_seconds)
+INSERT INTO public.tour_stops (id, tour_id, "order", name, description, cultural_context, latitude, longitude, radius_meters, audio_src, duration_seconds)
 VALUES
-  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001', 1, 'Murallas Ciclópeas', 'Imponentes muros de piedra de hasta 6 metros de altura, construidos con bloques megalíticos de hasta 100 toneladas.', -13.5078, -71.9815, 15, '/voices/sacsayhuaman_es.mp3', 240),
-  ('00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000001', 2, 'Torreón de Muyucmarca', 'Torre circular de origen inca. Su nombre en quechua significa "lugar redondo".', -13.5085, -71.9820, 20, '/voices/sacsayhuaman_es.mp3', 360),
-  ('00000000-0000-0000-0000-000000000103', '00000000-0000-0000-0000-000000000001', 3, 'Sacsayhuamán — Fortaleza del Sol', 'El corazón del complejo. Fortaleza ceremonial dedicada al Inti (Sol).', -13.5075, -71.9825, 25, '/voices/sacsayhuaman_es.mp3', 330),
-  ('00000000-0000-0000-0000-000000000104', '00000000-0000-0000-0000-000000000001', 4, 'Plaza del Inca', 'Espacio ceremonial con vista panorámica del Valle Sagrado.', -13.5068, -71.9830, 20, '/voices/sacsayhuaman_es.mp3', 300),
-  ('00000000-0000-0000-0000-000000000105', '00000000-0000-0000-0000-000000000001', 5, 'Templo de la Luna', 'Estructura ceremonial dedicada a Quilla, la diosa Luna.', -13.5060, -71.9820, 25, '/voices/sacsayhuaman_es.mp3', 420),
-  ('00000000-0000-0000-0000-000000000106', '00000000-0000-0000-0000-000000000001', 6, 'Túneles Subterráneos', 'Red de pasajes que conectan diferentes partes del complejo.', -13.5065, -71.9805, 20, '/voices/sacsayhuaman_es.mp3', 480),
-  ('00000000-0000-0000-0000-000000000107', '00000000-0000-0000-0000-000000000001', 7, 'Mirador Panorámico', 'Punto más alto del recorrido con vista de 360° del Valle Sagrado.', -13.5070, -71.9795, 20, '/voices/sacsayhuaman_es.mp3', 270),
-  ('00000000-0000-0000-0000-000000000108', '00000000-0000-0000-0000-000000000001', 8, 'Roca Sagrada', 'Formación rocosa ceremonial tallada por los incas.', -13.5075, -71.9790, 15, '/voices/sacsayhuaman_es.mp3', 180),
-  ('00000000-0000-0000-0000-000000000109', '00000000-0000-0000-0000-000000000001', 9, 'Altar Ceremonial', 'Plataforma ceremonial donde se realizaban ofrendas a la Pachamama.', -13.5080, -71.9800, 15, '/voices/sacsayhuaman_es.mp3', 300)
+  ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001', 1, 'Murallas Ciclópeas', 'Imponentes muros de piedra de hasta 6 metros de altura, construidos con bloques megalíticos de hasta 100 toneladas.', 'Estos muros representan el dominio inca de la ingeniería sísmica. Las piedras encajan con superficies curvas y 12 ángulos distintos, lo que las hace resistentes a terremotos.', -13.5078, -71.9815, 15, '/voices/sacsayhuaman_es.mp3', 240),
+  ('00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000001', 2, 'Torreón de Muyucmarca', 'Torre circular de origen inca. Su nombre en quechua significa "lugar redondo".', 'Las torres circulares tenían propósitos duales: defensivos y ceremoniales. Los incas alineaban sus estructuras con los cerros sagrados y eventos celestes.', -13.5085, -71.9820, 20, '/voices/sacsayhuaman_es.mp3', 360),
+  ('00000000-0000-0000-0000-000000000103', '00000000-0000-0000-0000-000000000001', 3, 'Sacsayhuamán — Fortaleza del Sol', 'El corazón del complejo. Fortaleza ceremonial dedicada al Inti (Sol).', 'Los muros zigzagueantes no son solo decorativos: cada ángulo cumple una función acústica y estructural. El sonido rebotaba creando un efecto envolvente.', -13.5075, -71.9825, 25, '/voices/sacsayhuaman_es.mp3', 330),
+  ('00000000-0000-0000-0000-000000000104', '00000000-0000-0000-0000-000000000001', 4, 'Plaza del Inca', 'Espacio ceremonial con vista panorámica del Valle Sagrado.', 'Esta plaza era el escenario del Inti Raymi original. El espacio fue diseñado para que el sonido viajara sin distorsión.', -13.5068, -71.9830, 20, '/voices/sacsayhuaman_es.mp3', 300),
+  ('00000000-0000-0000-0000-000000000105', '00000000-0000-0000-0000-000000000001', 5, 'Templo de la Luna', 'Estructura ceremonial dedicada a Quilla, la diosa Luna.', 'Quilla era la contraparte femenina del Inti, asociada con los ciclos menstruales y las cosechas. Los incas medían el tiempo observando sus fases.', -13.5060, -71.9820, 25, '/voices/sacsayhuaman_es.mp3', 420),
+  ('00000000-0000-0000-0000-000000000106', '00000000-0000-0000-0000-000000000001', 6, 'Túneles Subterráneos', 'Red de pasajes que conectan diferentes partes del complejo.', 'El Ukhu Pacha (mundo subterráneo) era tan importante como el mundo de arriba. Los túneles permitían el tránsito de sacerdotes sin ser vistos.', -13.5065, -71.9805, 20, '/voices/sacsayhuaman_es.mp3', 480),
+  ('00000000-0000-0000-0000-000000000107', '00000000-0000-0000-0000-000000000001', 7, 'Mirador Panorámico', 'Punto más alto del recorrido con vista de 360° del Valle Sagrado.', 'Cada montaña (apu) tiene su nombre e historia. El Ausangate al sur, el Salkantay al oeste — los apus más sagrados vigilan el valle.', -13.5070, -71.9795, 20, '/voices/sacsayhuaman_es.mp3', 270),
+  ('00000000-0000-0000-0000-000000000108', '00000000-0000-0000-0000-000000000001', 8, 'Roca Sagrada', 'Formación rocosa ceremonial tallada por los incas.', 'Cada ángulo y sombra tenía un significado calendárico. Durante el solsticio de invierno, la sombra señala el centro ceremonial.', -13.5075, -71.9790, 15, '/voices/sacsayhuaman_es.mp3', 180),
+  ('00000000-0000-0000-0000-000000000109', '00000000-0000-0000-0000-000000000001', 9, 'Altar Ceremonial', 'Plataforma ceremonial donde se realizaban ofrendas a la Pachamama.', 'La ofrenda era un contrato de reciprocidad. Los incas ofrecían lo mejor de sus cosechas a cambio de la protección de la Pachamama.', -13.5080, -71.9800, 15, '/voices/sacsayhuaman_es.mp3', 300)
 ON CONFLICT DO NOTHING;
 
 -- ============================================================

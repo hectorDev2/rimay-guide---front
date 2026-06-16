@@ -19,11 +19,15 @@ function detectLang(): string {
 async function loadLang(lang: string) {
   const flat: Record<string, string> = { ...(BUNDLES[lang] ?? FALLBACK_ES) };
 
-  const remote = await fetchTranslations(lang);
-  for (const [ns, keys] of Object.entries(remote)) {
-    for (const [key, value] of Object.entries(keys)) {
-      flat[`${ns}.${key}`] = value;
+  try {
+    const remote = await fetchTranslations(lang);
+    for (const [ns, keys] of Object.entries(remote)) {
+      for (const [key, value] of Object.entries(keys)) {
+        flat[`${ns}.${key}`] = value;
+      }
     }
+  } catch (e) {
+    console.warn('i18n: error fetching remote translations, using fallback', e);
   }
 
   if (!i18n.isInitialized) {
@@ -32,15 +36,31 @@ async function loadLang(lang: string) {
       lng: lang,
       fallbackLng: 'es',
       interpolation: { escapeValue: false },
+      returnNull: false,
+      returnEmptyString: false,
     });
   } else {
     i18n.addResourceBundle(lang, 'translation', flat, true, true);
-    i18n.changeLanguage(lang);
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
   }
 }
 
 const initialLang = detectLang();
-await loadLang(initialLang);
+
+if (!i18n.isInitialized) {
+  i18n.use(initReactI18next).init({
+    resources: { [initialLang]: { translation: BUNDLES[initialLang] ?? FALLBACK_ES } },
+    lng: initialLang,
+    fallbackLng: 'es',
+    interpolation: { escapeValue: false },
+    returnNull: false,
+    returnEmptyString: false,
+  });
+}
+
+loadLang(initialLang);
 
 i18n.on('languageChanged', (lng) => {
   localStorage.setItem('rimay-lang', lng);
