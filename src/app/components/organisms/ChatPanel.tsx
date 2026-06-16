@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type FormEvent } from 'react';
 import { useChatStore, type Message } from '@/stores/chatStore';
 import { useTourStore } from '@/stores/tourStore';
+import type { Tour } from '@/lib/tour/types';
 import { MessageCircle, Send, X, Trash2, Wifi, WifiOff, ThumbsUp, ThumbsDown, ArrowDown } from 'lucide-react';
 
 function formatTime(timestamp: number): string {
@@ -30,12 +31,38 @@ function renderContent(content: string): React.JSX.Element[] {
   return elements;
 }
 
-const SUGGESTED_QUESTIONS = [
-  '¿Qué es esta parada?',
-  'Contame sobre la cultura Inca',
-  '¿Qué significa Sacsayhuamán?',
-  '¿Qué más puedo ver cerca?',
-];
+function buildContextualQuestions(tour: Tour | null, stopIndex: number): string[] {
+  const stop = tour?.stops[stopIndex];
+  if (!stop) return [
+    'Contame sobre la cultura Inca',
+    '¿Qué significa Sacsayhuamán?',
+    '¿Qué más puedo ver cerca?',
+  ];
+
+  const stopName = stop.name.split('—')[0]?.trim() ?? stop.name;
+  const lower = (stop.description + ' ' + stop.culturalContext).toLowerCase();
+
+  const questions: string[] = [
+    `¿Qué destaca de ${stopName}?`,
+  ];
+
+  if (lower.includes('piedra') || lower.includes('muro') || lower.includes('construcci'))
+    questions.push(`¿Cómo construyeron los muros de ${stopName}?`);
+  else if (lower.includes('ceremonia') || lower.includes('ritual') || lower.includes('culto'))
+    questions.push(`¿Qué ceremonias se hacían en ${stopName}?`);
+  else
+    questions.push(`¿Qué historia hay detrás de ${stopName}?`);
+
+  if (lower.includes('sol') || lower.includes('luna') || lower.includes('inti') || lower.includes('quilla') || lower.includes('astronom'))
+    questions.push('¿Cómo se relaciona con la astronomía inca?');
+  else if (lower.includes('pachamama') || lower.includes('tierra') || lower.includes('apu'))
+    questions.push('¿Qué rol tiene la Pachamama en este lugar?');
+  else
+    questions.push('Contame sobre la cultura Inca');
+
+  questions.push('¿Qué más puedo ver cerca?');
+  return questions;
+}
 
 function MessageBubble({ message, onFeedback }: { message: Message; onFeedback?: (value: 1 | -1 | null) => void }) {
   const isUser = message.role === 'user';
@@ -109,6 +136,11 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
   const tour = useTourStore((s) => s.tour);
   const currentStopIndex = useTourStore((s) => s.currentStopIndex);
   const completedIds = useTourStore((s) => s.completedIds);
+
+  const builtQuestions = useMemo(
+    () => buildContextualQuestions(tour, currentStopIndex),
+    [tour, currentStopIndex],
+  );
 
   const userMessages = messages.filter((m) => m.id !== 'welcome');
   const showSuggestions = userMessages.length === 0 && !isLoading;
@@ -213,7 +245,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
           <div className="mb-4">
             <p className="text-xs text-[#6E6E6E] mb-2">Preguntas sugeridas:</p>
             <div className="flex flex-wrap gap-2">
-              {SUGGESTED_QUESTIONS.map((q) => (
+              {builtQuestions.map((q) => (
                 <button
                   key={q}
                   onClick={() => handleQuickQuestion(q)}

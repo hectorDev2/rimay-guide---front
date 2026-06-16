@@ -7,15 +7,23 @@ interface Position {
   timestamp: number;
 }
 
+interface NearbyStop {
+  id: string;
+  name: string;
+  distance: number;
+}
+
 interface LocationState {
   position: Position | null;
   error: string | null;
   isWatching: boolean;
   activeStopId: string | null;
+  nearbyStop: NearbyStop | null;
   setPosition: (position: Position) => void;
   setError: (error: string | null) => void;
   setWatching: (value: boolean) => void;
   setActiveStop: (stopId: string | null) => void;
+  setNearbyStop: (nearby: NearbyStop | null) => void;
   stopWatching: () => void;
 }
 
@@ -24,6 +32,7 @@ export const useLocationStore = create<LocationState>((set) => ({
   error: null,
   isWatching: false,
   activeStopId: null,
+  nearbyStop: null,
 
   setPosition: (position) => set({ position, error: null }),
 
@@ -33,5 +42,7 @@ export const useLocationStore = create<LocationState>((set) => ({
 
   setActiveStop: (stopId) => set({ activeStopId: stopId }),
 
-  stopWatching: () => set({ isWatching: false, activeStopId: null }),
+  setNearbyStop: (nearby) => set({ nearbyStop: nearby }),
+
+  stopWatching: () => set({ isWatching: false, activeStopId: null, nearbyStop: null }),
 }));

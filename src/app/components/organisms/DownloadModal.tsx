@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Download, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Download, CheckCircle2, AlertCircle, Wifi, Smartphone } from 'lucide-react';
 import { useTourStore } from '@/stores/tourStore';
 
 interface DownloadModalProps {
@@ -13,7 +12,6 @@ function getUniqueAudioUrls(stops: { audioSrc: string }[]): string[] {
 }
 
 export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProps) {
-  const { t } = useTranslation();
   const tour = useTourStore((s) => s.tour);
   const [progress, setProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -89,7 +87,7 @@ export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProp
   const totalMb = tour ? (getUniqueAudioUrls(tour.stops).length * 0.572).toFixed(1) : '—';
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50" role="dialog" aria-modal="true" aria-label={t('download.aria')}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50" role="dialog" aria-modal="true" aria-label="Descargar tour">
       <div className="bg-[#171717] rounded-[30px] p-8 max-w-sm w-full border border-[#2C2C2C] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         <div className="flex justify-center mb-6">
           <div className="relative">
@@ -98,12 +96,14 @@ export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProp
             ) : status === 'error' ? (
               <AlertCircle className="w-20 h-20 text-[#FF4D67]" />
             ) : (
-              <Download className="w-20 h-20 text-[#E6FF00]" />
+              <div className="w-20 h-20 rounded-[22px] bg-[#1E1E1E] border border-[#2C2C2C] flex items-center justify-center">
+                <Wifi className="w-10 h-10 text-[#D4A843]" />
+              </div>
             )}
             {isDownloading && status !== 'done' && status !== 'error' && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <svg className="w-24 h-24 -rotate-90">
-                  <circle cx="48" cy="48" r="40" stroke="#E6FF00" strokeWidth="6" fill="none"
+                  <circle cx="48" cy="48" r="40" stroke="#D4A843" strokeWidth="6" fill="none"
                     strokeDasharray={`${progress * 2.51} 251`}
                     className="transition-all duration-300" strokeLinecap="round" />
                 </svg>
@@ -113,51 +113,63 @@ export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProp
         </div>
 
         <h3 className="text-[22px] font-semibold text-white text-center mb-3 leading-tight">
-          {status === 'done' ? '¡Descarga completa!' : status === 'error' ? 'Error de descarga' : t('download.title')}
+          {status === 'done' ? '¡Descarga completa!' : status === 'error' ? 'Error de descarga' : 'Sin Wi-Fi en Sacsayhuamán'}
         </h3>
-        <p className="text-center text-[#6E6E6E] text-[15px] mb-6">
+        <p className="text-center text-[#A6A6A6] text-[15px] mb-6">
           {status === 'done'
-            ? 'Ya podés usar Rimay sin conexión'
+            ? 'Ya podés usar Rimay sin conexión. Escuchá el tour aunque no haya señal.'
             : status === 'error'
               ? errorMsg
-              : `${tour?.name ?? 'Tour'} (${totalMb} MB) · Recomendamos Wi-Fi`
+              : 'Descargá el tour ahora para escucharlo sin señal cuando estés en las ruinas.'
           }
         </p>
 
         {isDownloading && status !== 'error' && (
           <div className="mb-6">
             <div className="h-2 bg-[#2C2C2C] rounded-full overflow-hidden">
-              <div className="h-full bg-[#E6FF00] transition-all duration-300 rounded-full"
+              <div className="h-full bg-[#D4A843] transition-all duration-300 rounded-full"
                 style={{ width: `${progress}%` }} />
             </div>
-            <p className="text-center text-sm text-[#6E6E6E] mt-2">{progress}%</p>
+            <p className="text-center text-sm text-[#6E6E6E] mt-2">{progress}% · {totalMb} MB</p>
           </div>
         )}
 
         {status === 'idle' && (
-          <button onClick={handleDownload}
-            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all mb-4">
-            {t('download.button')}
-          </button>
+          <>
+            <button onClick={handleDownload}
+              className="w-full h-14 rounded-full bg-[#D4A843] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(212,168,67,0.3)] active:scale-[0.96] transition-all mb-3 flex items-center justify-center gap-2">
+              <Wifi className="w-5 h-5" />
+              Descargar con Wi-Fi
+            </button>
+            <button onClick={handleDownload}
+              className="w-full h-14 rounded-full bg-[#1E1E1E] text-white text-[15px] font-medium border border-[#2C2C2C] active:scale-[0.96] transition-all mb-3 flex items-center justify-center gap-2">
+              <Smartphone className="w-5 h-5 text-[#A6A6A6]" />
+              Descargar igual con datos
+            </button>
+            <button onClick={onClose}
+              className="w-full text-center text-[13px] text-[#6E6E6E] hover:text-white transition-colors py-2">
+              Ahora no
+            </button>
+          </>
         )}
 
         {status === 'error' && (
           <button onClick={handleDownload}
-            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all mb-4">
+            className="w-full h-14 rounded-full bg-[#D4A843] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(212,168,67,0.3)] active:scale-[0.96] transition-all mb-4">
             Reintentar
           </button>
         )}
 
         {status === 'done' && (
           <button onClick={onClose}
-            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all mb-4">
+            className="w-full h-14 rounded-full bg-[#D4A843] text-[#111111] font-semibold text-[15px] shadow-[0_8px_20px_rgba(212,168,67,0.3)] active:scale-[0.96] transition-all mb-4">
             Listo
           </button>
         )}
 
         {status === 'idle' && (
-          <p className="text-xs text-center text-[#6E6E6E]">
-            {t('download.keepOpen')}
+          <p className="text-xs text-center text-[#6E6E6E] mt-2">
+            {totalMb} MB · ~30s en Wi-Fi
           </p>
         )}
       </div>

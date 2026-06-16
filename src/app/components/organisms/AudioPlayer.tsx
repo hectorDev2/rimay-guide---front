@@ -1,7 +1,7 @@
 const WAVEFORM_BARS = 48;
 const WAVEFORM_HEIGHTS = Array.from({ length: WAVEFORM_BARS }, () => Math.random() * 60 + 20);
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle, ArrowLeft } from 'lucide-react';
@@ -28,6 +28,8 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
   const [showWidgets, setShowWidgets] = useState(false);
   const progressContainerRef = useRef<HTMLDivElement>(null);
   const [seekHoverTime, setSeekHoverTime] = useState<{ x: number; time: string } | null>(null);
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const markStopCompleted = useTourStore((s) => s.markStopCompleted);
   const storeSetPlaying = useAudioStore((s) => s.setPlaying);
   const storeSetCurrentStop = useAudioStore((s) => s.setCurrentStop);
@@ -79,10 +81,47 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
     };
   }, [isPlaying, stop.audioSrc, audioError]);
 
+  const cancelAutoAdvance = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    setAutoAdvanceCountdown(null);
+  }, []);
+
+  const startAutoAdvanceCountdown = useCallback(() => {
+    setAutoAdvanceCountdown(4);
+    countdownRef.current = setInterval(() => {
+      setAutoAdvanceCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    if (autoAdvanceCountdown === 0) {
+      onNext();
+      setAutoAdvanceCountdown(null);
+    }
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+    };
+  }, [autoAdvanceCountdown, onNext]);
+
   const handleEnded = () => {
     markStopCompleted(stop.id);
     storeSetPlaying(false);
-    onNext();
+    startAutoAdvanceCountdown();
   };
 
   const togglePlayPause = () => {
@@ -207,9 +246,15 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
             </h2>
           </div>
 
-          {/* Waveform visualization */}
-          <div className="mb-6">
-            <div className="h-16 flex items-end justify-between gap-[3px]">
+          {/* Waveform = Seek bar */}
+          <div
+            className="mb-2 group relative"
+            ref={progressContainerRef}
+            onClick={handleProgressClick}
+            onMouseMove={handleProgressHover}
+            onMouseLeave={handleProgressLeave}
+          >
+            <div className="h-16 flex items-end justify-between gap-[3px] cursor-pointer">
               {waveformHeights.current.map((height, i) => {
                 const isPlayed = i < (WAVEFORM_BARS * progressPercent / 100);
                 return (
@@ -219,36 +264,18 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
                     style={{
                       height: `${height}%`,
                       background: isPlayed
-                        ? 'linear-gradient(180deg, #E6FF00 0%, #AFFF00 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
-                      boxShadow: isPlayed ? '0 0 12px rgba(230,255,0,0.3)' : 'none',
+                        ? 'linear-gradient(180deg, #D4A843 0%, #B8922E 100%)'
+                        : '#1E1E1E',
+                      boxShadow: isPlayed ? '0 0 8px rgba(212,168,67,0.3)' : 'none',
                     }}
                   />
                 );
               })}
             </div>
-          </div>
-
-          {/* Progress bar */}
-          <div
-            className="mb-2 group relative"
-            ref={progressContainerRef}
-            onClick={handleProgressClick}
-            onMouseMove={handleProgressHover}
-            onMouseLeave={handleProgressLeave}
-          >
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden cursor-pointer relative">
-              <div
-                className="h-full bg-[#E6FF00] transition-all duration-100 relative rounded-full"
-                style={{ width: `${progressPercent}%` }}
-              >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#E6FF00] shadow-[0_0_16px_rgba(230,255,0,0.6)] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </div>
             {/* Hover time tooltip */}
             {seekHoverTime && (
               <div
-                className="absolute -top-8 bg-[#1E1E1E] text-white text-xs px-2 py-1 rounded-lg border border-white/10 pointer-events-none"
+                className="absolute -top-7 bg-[#1E1E1E] text-[#F0EDE8] text-xs px-2 py-1 rounded-lg border border-[#2C2C2C] pointer-events-none font-mono"
                 style={{ left: `${seekHoverTime.x}px`, transform: 'translateX(-50%)' }}
               >
                 {seekHoverTime.time}
@@ -258,8 +285,8 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
 
           {/* Time labels */}
           <div className="flex justify-between text-[#6E6E6E] text-[13px] font-medium mb-8">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+            <span className="font-mono">{formatTime(currentTime)}</span>
+            <span className="font-mono">{formatTime(duration)}</span>
           </div>
 
           {/* Controls */}
@@ -310,6 +337,28 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
             </button>
           </div>
         </div>
+
+        {/* Auto-advance countdown */}
+        {autoAdvanceCountdown !== null && autoAdvanceCountdown > 0 && (
+          <div className="mb-3">
+            <div className="bg-[#171717] border border-[#D4A843]/30 rounded-[22px] px-5 py-3 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[#AFFF00] text-[13px] font-medium">✓ {stop.name}</span>
+                </div>
+                <p className="text-white text-[13px]">
+                  Siguiente en {autoAdvanceCountdown}s → {nextStopName ?? 'Fin del tour'}
+                </p>
+              </div>
+              <button
+                onClick={cancelAutoAdvance}
+                className="flex-shrink-0 h-10 px-4 rounded-full bg-[#1E1E1E] border border-[#2C2C2C] text-white text-[13px] font-medium active:scale-90 transition-all hover:bg-[#2C2C2C]"
+              >
+                Pausar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Next stop — floating pill */}
         <button

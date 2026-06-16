@@ -40,6 +40,30 @@ function findNearestStopInRange(
   return nearest?.stop ?? null;
 }
 
+interface NearbyResult {
+  stop: TourStop;
+  distance: number;
+}
+
+function findNearbyStop(
+  lat: number,
+  lon: number,
+  stops: TourStop[],
+): NearbyResult | null {
+  let nearest: NearbyResult | null = null;
+
+  for (const stop of stops) {
+    const distance = calculateDistance(lat, lon, stop.latitude, stop.longitude);
+    if (distance <= 100 && distance > 25) {
+      if (!nearest || distance < nearest.distance) {
+        nearest = { stop, distance };
+      }
+    }
+  }
+
+  return nearest;
+}
+
 interface UseGeolocationOptions {
   enabled?: boolean;
   highAccuracy?: boolean;
@@ -61,6 +85,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
   const setPosition = useLocationStore((s) => s.setPosition);
   const setError = useLocationStore((s) => s.setError);
   const setActiveStop = useLocationStore((s) => s.setActiveStop);
+  const setNearbyStop = useLocationStore((s) => s.setNearbyStop);
 
   useEffect(() => {
     if (!enabled || !('geolocation' in navigator)) {
@@ -95,6 +120,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
 
         if (nearest) {
           setActiveStop(String(nearest.id));
+          setNearbyStop(null);
 
           if (nearest.id !== lastActiveRef.current) {
             lastActiveRef.current = nearest.id;
@@ -103,6 +129,17 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
         } else {
           setActiveStop(null);
           lastActiveRef.current = null;
+
+          const nearby = findNearbyStop(
+            position.latitude,
+            position.longitude,
+            currentStops,
+          );
+          if (nearby) {
+            setNearbyStop({ id: nearby.stop.id, name: nearby.stop.name, distance: Math.round(nearby.distance) });
+          } else {
+            setNearbyStop(null);
+          }
         }
       }
     };

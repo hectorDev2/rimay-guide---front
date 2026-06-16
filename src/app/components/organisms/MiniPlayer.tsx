@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
-import { Play, Pause, SkipForward, SkipBack, ChevronUp } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
 import { useAudioStore } from '@/stores/audioStore';
+import { useTourStore } from '@/stores/tourStore';
 
 export function MiniPlayer() {
   const isPlaying = useAudioStore((s) => s.isPlaying);
@@ -11,7 +12,14 @@ export function MiniPlayer() {
   const togglePlay = useAudioStore((s) => s.togglePlay);
   const audioRef = useAudioStore((s) => s.audioRef);
 
+  const tour = useTourStore((s) => s.tour);
+  const completedIds = useTourStore((s) => s.completedIds);
+
   if (!currentStopId || !isPlaying) return null;
+
+  const totalStops = tour?.stops.length ?? 0;
+  const currentIndex = tour?.stops.findIndex((s) => s.id === currentStopId) ?? -1;
+  const stopNumber = currentIndex >= 0 ? currentIndex + 1 : 0;
 
   const fmt = (s: number) => {
     if (!s || !isFinite(s)) return '0:00';
@@ -38,7 +46,7 @@ export function MiniPlayer() {
         <div className="flex items-center gap-3">
           <button
             onClick={togglePlay}
-            className="w-10 h-10 rounded-full bg-[#E6FF00] flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+            className="w-10 h-10 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 text-[#111111]" fill="#111111" />
@@ -48,13 +56,18 @@ export function MiniPlayer() {
           </button>
 
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[13px] font-medium truncate">{currentStopName}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-white text-[13px] font-medium truncate">{currentStopName}</p>
+              <span className="text-[#6E6E6E] text-[11px] font-mono tabular-nums flex-shrink-0">
+                {stopNumber}/{totalStops}
+              </span>
+            </div>
             <div
-              className="h-1 bg-white/10 rounded-full overflow-hidden mt-1.5 cursor-pointer"
+              className="h-1 bg-[#1E1E1E] rounded-full overflow-hidden mt-1.5 cursor-pointer"
               onClick={seek}
             >
               <div
-                className="h-full bg-[#E6FF00] rounded-full transition-all duration-150"
+                className="h-full bg-[#D4A843] rounded-full transition-all duration-150"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
