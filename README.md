@@ -120,10 +120,11 @@ Three.js + R3F + Drei
 
 ```
 vite-plugin-pwa (Workbox, registerType: autoUpdate)
-  ├─ precache: JS, CSS, HTML
+  ├─ precache: JS, CSS, HTML, GLB
   ├─ runtimeCaching:
   │   ├─ images (Unsplash) → StaleWhileRevalidate (30d)
   │   ├─ audio MP3       → CacheFirst (90d)
+  │   ├─ modelos GLB     → CacheFirst (90d)
   │   └─ API calls       → NetworkFirst (5s timeout)
   └─ manifest: name, icons, theme_color (#A0522D), standalone
 ```
@@ -137,6 +138,36 @@ downloadWorker.ts (Web Worker)
   ├─ postMessage progreso (current, total, percent)
   └─ soporta cancelación
 ```
+
+### 9. Modelos 3D — Pipeline de optimización
+
+```
+Modelos fuente (.glb, sin optimizar)
+  │
+  ├─ 1. gltf-transform resize (texturas → 1024px)
+  ├─ 2. gltfpack -cc -si 0.5 (compresión meshopt + simplificación 50%)
+  │     Extensiones: EXT_meshopt_compression + KHR_mesh_quantization
+  │     Decodificador: MeshoptDecoder (drei lo configura automático en useGLTF)
+  │
+  └─ Output → src/public/ (4-6 MB típico, ≤ 5 MB para precache Workbox)
+
+Prebuild hook: npm run build → npm run optimize:models (automático)
+Script manual: npm run optimize:models
+Origen: src/public/models/source/*.glb
+Destino: src/public/*.glb
+```
+
+**Resultado típico (Qoricancha)**:
+
+| Métrica | Original (Tripo AI) | Optimizado | Reducción |
+|---------|---------------------|------------|-----------|
+| Archivo | 59 MB | 4.6 MB | 92% |
+| Triángulos | 1.89M | 947K | 50% |
+| Texturas | 2048px × 3 (JPEG) | 1024px × 3 | 75% |
+| GPU VRAM | 125 MB | 18.2 MB | 85% |
+| Descarga 3G | ~3 min | ~5 seg | 97% |
+
+El pipeline está en `scripts/optimize-models.mjs`. Requiere `@gltf-transform/cli` y `gltfpack` instalados globalmente.
 
 ---
 
@@ -158,7 +189,14 @@ src/
 ├── services/               # tourData, tourService
 ├── stores/                 # authStore, tourStore, locationStore, mapStore, chatStore
 ├── styles/                 # index.css, tailwind.css, theme.css
+├── public/                 # modelos 3D (.glb), assets estáticos
+│   └── models/source/      # modelos sin optimizar (origen del pipeline)
 └── workers/                # downloadWorker
+```
+
+```
+scripts/
+└── optimize-models.mjs     # pipeline de compresión gltf-transform + gltfpack
 ```
 
 ---
@@ -169,6 +207,14 @@ src/
 npm install
 npm run dev
 ```
+
+### Dependencias globales (para optimización de modelos 3D)
+
+```bash
+npm i -g @gltf-transform/cli gltfpack
+```
+
+Sin estas, `npm run optimize:models` y el `prebuild` hook fallarán. Si no trabajás con modelos 3D, podés saltearlas.
 
 ### Variables de entorno (.env)
 
