@@ -18,6 +18,12 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.test.{ts,tsx}'],
+  },
   plugins: [
     figmaAssetResolver(),
     react(),
@@ -26,7 +32,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,mp3,json,webp,jpg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,mp3,json,webp,jpg,glb}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
