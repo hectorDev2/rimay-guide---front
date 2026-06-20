@@ -56,7 +56,9 @@ onAuthStateChange → actualiza authStore automáticamente
 Supabase PostgreSQL
   ┌─ tours (slug, name, description)
   ├─ tour_stops (lat, lng, radius, audioSrc, order)
-  └─ user_progress (user_id, stop_id, completed)
+  ├─ user_progress (user_id, stop_id, completed)
+  ├─ chat_sessions (user_id, tour_id) ← único por usuario+tour
+  └─ chat_messages (session_id, role, content, feedback)
 
 App.tsx
   ├─ SACSAYHUAMAN_TOUR (types.ts) ← 9 stops con coordenadas reales
@@ -139,6 +141,7 @@ downloadWorker.ts (Web Worker)
   └─ soporta cancelación
 ```
 
+<<<<<<< Updated upstream
 ### 9. Modelos 3D — Pipeline de optimización
 
 ```
@@ -169,6 +172,30 @@ Destino: src/public/*.glb
 
 El pipeline está en `scripts/optimize-models.mjs`. Requiere `@gltf-transform/cli` y `gltfpack` instalados globalmente.
 
+=======
+### 9. Chat IA (Rimay IA)
+
+```
+ChatButton (FAB flotante) → toggleChat → ChatPanel (full-screen overlay)
+
+sendMessage(content, TourContext)
+  │
+  ├── Online (Gemini API) ──► streaming response
+  │     └── upsert a Supabase (sesión creada lazy en primer mensaje)
+  │
+  └── Offline (Fuse.js) ──► responde desde knowledge base local
+        └── cola pending sync → drena al reconectar
+
+Persistencia:
+  ├─ Supabase: chat_sessions(user_id, tour_id) + chat_messages
+  ├─ localStorage: rimay_chat_messages (caché offline)
+  └─ rimay_chat_pending: cola de mensajes offline por sincronizar
+
+Feedback:
+  └─ Thumbs up/down por mensaje → UPDATE chat_messages.feedback
+```
+
+>>>>>>> Stashed changes
 ---
 
 ## Estructura de carpetas
@@ -178,13 +205,15 @@ src/
 ├── app/
 │   ├── components/
 │   │   ├── atoms/          # ErrorBoundary, PageTransition, OfflineToast
-│   │   ├── organisms/      # AudioPlayer, TourMap, ChatPanel, LocationModal
+│   │   ├── organisms/      # AudioPlayer, TourMap, ChatPanel, ChatButton, LocationModal
 │   │   └── ui/             # shadcn/ui (Button, Input, etc.)
 │   ├── screens/            # LoginScreen, SplashScreen, NotFoundScreen
 │   └── App.tsx             # Router + providers
 ├── hooks/                  # useGeolocation
 ├── lib/
+│   ├── chat/               # geminiClient, offlineSearch, tourContext, constants
 │   ├── map/                # pois, geofence, siteModels, hotspots
+│   ├── supabase/           # types (TourRow, ChatMessageRow, etc.)
 │   └── tour/               # types (TourStop, SACSAYHUAMAN_TOUR)
 ├── services/               # tourData, tourService
 ├── stores/                 # authStore, tourStore, locationStore, mapStore, chatStore
@@ -192,6 +221,8 @@ src/
 ├── public/                 # modelos 3D (.glb), assets estáticos
 │   └── models/source/      # modelos sin optimizar (origen del pipeline)
 └── workers/                # downloadWorker
+
+openspec/                   # SDD artifacts (config, specs, archived changes)
 ```
 
 ```
@@ -222,13 +253,14 @@ Sin estas, `npm run optimize:models` y el `prebuild` hook fallarán. Si no traba
 VITE_MAPBOX_TOKEN=pk.xxx
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJxxx
+VITE_GEMINI_API_KEY=AIzaXXX   # opcional — sin esto el chat funciona solo offline
 ```
 
-La app requiere Supabase Auth y Mapbox. Sin token de Mapbox, el mapa muestra un fallback informativo.
+La app requiere Supabase Auth y Mapbox. Sin token de Mapbox, el mapa muestra un fallback informativo. Sin Gemini API key, el chat responde con contenido local (knowledge base de cultura Inca).
 
 ### Base de datos
 
-Ejecutar `docs/supabase-schema.sql` en el SQL Editor de Supabase para crear tablas, datos semilla y políticas RLS. Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
+Ejecutar `docs/supabase-schema.sql` en el SQL Editor de Supabase para crear tablas (tours, tour_stops, user_progress, translations, chat_sessions, chat_messages), datos semilla y políticas RLS. Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
 
 ---
 
@@ -240,4 +272,4 @@ Ejecutar `docs/supabase-schema.sql` en el SQL Editor de Supabase para crear tabl
 | `tourStore` | tour, stops, currentStopIndex, isDownloaded, completedIds |
 | `locationStore` | position (lat/lng/accuracy), isWatching, activeStopId |
 | `mapStore` | isReady, activePoi, showPopup, show3DViewer, flyToPoi |
-| `chatStore` | isOpen, messages, toggle/send/reset |
+| `chatStore` | messages, isOpen, isLoading, isOnline, streamingContent, currentSessionId, sendMessage, toggleChat, clearChat, updateFeedback, loadSession |
