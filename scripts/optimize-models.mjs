@@ -60,13 +60,17 @@ async function main() {
   console.log('\n🔧 Rimay 3D Model Optimizer\n');
 
   // Check tools
+  let hasTools = true;
   try { execSync('gltf-transform --version', { stdio: 'pipe' }); } catch {
-    console.error('❌ gltf-transform no encontrado. Instalá: npm i -g @gltf-transform/cli');
-    process.exit(1);
+    hasTools = false;
   }
   try { execSync('gltfpack -v', { stdio: 'pipe' }); } catch {
-    console.error('❌ gltfpack no encontrado. Instalá: npm i -g gltfpack');
-    process.exit(1);
+    hasTools = false;
+  }
+  if (!hasTools) {
+    console.log('⚠️  gltf-transform/gltfpack no encontrados. Omitiendo optimización de modelos 3D.');
+    console.log('   Instalá: npm i -g @gltf-transform/cli gltfpack (opcional, solo para desarrollo)');
+    return;
   }
 
   // Check source directory
