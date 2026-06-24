@@ -51,7 +51,10 @@ const initialLang = detectLang();
 
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
-    resources: { [initialLang]: { translation: BUNDLES[initialLang] ?? FALLBACK_ES } },
+    resources: {
+      es: { translation: FALLBACK_ES },
+      en: { translation: FALLBACK_EN },
+    },
     lng: initialLang,
     fallbackLng: 'es',
     interpolation: { escapeValue: false },
