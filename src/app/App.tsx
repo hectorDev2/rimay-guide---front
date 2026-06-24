@@ -5,6 +5,7 @@ import { LogOut, AlertTriangle, RefreshCw } from 'lucide-react';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
+import { LandingScreen } from './screens/LandingScreen';
 import { AudioPlayer } from './components/organisms/AudioPlayer';
 import { TourStopsList, type TourStopDisplay } from './components/organisms/TourStopsList';
 import { LocationModal } from './components/organisms/LocationModal';
@@ -118,7 +119,7 @@ function TourRoute() {
     return <Navigate to={`/login?redirect=/tour/${slug}`} replace />;
   }
 
-  return <SplashRoute />;
+  return <Navigate to="/tour" replace />;
 }
 
 function SplashRoute() {
@@ -390,6 +391,7 @@ export default function App() {
   const tour = useTourStore((s) => s.tour);
   const [isTourLoading, setIsTourLoading] = useState(!tour);
   const [tourError, setTourError] = useState<string | null>(null);
+  const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
     initializeAuth();
@@ -453,20 +455,21 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="size-full relative dark">
-        <div className="h-full w-full max-w-md mx-auto relative bg-background text-foreground overflow-hidden">
-          <OfflineToast />
-          <LogoutButton />
+        <div className={isLandingPage ? "size-full bg-background" : "h-full w-full max-w-md mx-auto relative bg-background text-foreground overflow-hidden"}>
+          {!isLandingPage && <OfflineToast />}
+          {!isLandingPage && <LogoutButton />}
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
-              <Route path="/" element={<SplashRoute />} />
+              <Route path="/" element={<LandingScreen />} />
+              <Route path="/tour" element={<SplashRoute />} />
               <Route path="/login" element={<LoginRoute />} />
               <Route path="/player" element={<PlayerRoute />} />
               <Route path="/tour/:slug" element={<TourRoute />} />
               <Route path="*" element={<NotFoundScreen />} />
             </Routes>
           </AnimatePresence>
-          <ChatWrapper />
-          <MiniPlayer />
+          {!isLandingPage && <ChatWrapper />}
+          {!isLandingPage && <MiniPlayer />}
         </div>
       </div>
     </ErrorBoundary>
