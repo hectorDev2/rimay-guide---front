@@ -66,7 +66,7 @@ tourStore (persist)
   ├── isDownloaded, downloadProgress, isDownloading
   └── completedIds (persist: rimay-tour)
 
-POIs (pois.ts): 15 puntos (9 tour + 6 culturales)
+POIs (pois.ts): 16 puntos (9 tour + 7 culturales)
   └── Categorías: templo, fortaleza, plaza, santuario, mirador, mercado, barrio, tour_stop
 
 chatStore (localStorage + Supabase)
@@ -143,7 +143,7 @@ sendMessage()
   │     │     └─ Supabase upsert (chat_sessions + chat_messages)
   │     │
   │     └─ ❌ → Fuse.js fuzzy search
-  │           ├─ Knowledge base: 16+ ítems culturales
+  │           ├─ Knowledge base: 19 ítems culturales + 9 stops
   │           ├─ Tokeniza query → fuzzy match
   │           └─ Respuesta local con matching scores
   │
@@ -227,9 +227,10 @@ src/
 │   │   └── ui/                  # shadcn/ui (38 componentes Radix)
 │   └── screens/                 # SplashScreen, LoginScreen, NotFoundScreen
 ├── hooks/                       # useGeolocation (Haversine + geofencing)
+├── i18n/                        # react-i18next + fallbacks ES/EN
 ├── lib/
-│   ├── chat/                    # geminiClient, offlineSearch, constants, tourContext
-│   ├── map/                     # pois (15 POIs), geofence, hotspots (30+), siteModels
+│   ├── chat/                    # geminiClient, offlineSearch, constants (28 items), tourContext
+│   ├── map/                     # pois (16 POIs), geofence, hotspots (30+), siteModels
 │   ├── tour/                    # types (Tour/TourStop), data (9 stops hardcodeados)
 │   └── supabase/                # types, supabaseClient
 ├── services/                    # tourService (Supabase + fallback), translationService
