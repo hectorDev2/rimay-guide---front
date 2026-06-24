@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Download, CheckCircle2, AlertCircle, Wifi, Smartphone } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Wifi, Smartphone } from 'lucide-react';
 import { useTourStore } from '@/stores/tourStore';
 
 interface DownloadModalProps {
@@ -90,47 +90,43 @@ export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProp
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50" role="dialog" aria-modal="true" aria-label="Descargar tour">
       <div className="bg-[#171717] rounded-[30px] p-8 max-w-sm w-full border border-[#2C2C2C] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         <div className="flex justify-center mb-6">
-          <div className="relative">
-            {status === 'done' ? (
-              <CheckCircle2 className="w-20 h-20 text-[#AFFF00]" />
-            ) : status === 'error' ? (
-              <AlertCircle className="w-20 h-20 text-[#FF4D67]" />
-            ) : (
-              <div className="w-20 h-20 rounded-[22px] bg-[#1E1E1E] border border-[#2C2C2C] flex items-center justify-center">
-                <Wifi className="w-10 h-10 text-[#D4A843]" />
-              </div>
-            )}
-            {isDownloading && status !== 'done' && status !== 'error' && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-24 h-24 -rotate-90">
-                  <circle cx="48" cy="48" r="40" stroke="#D4A843" strokeWidth="6" fill="none"
-                    strokeDasharray={`${progress * 2.51} 251`}
-                    className="transition-all duration-300" strokeLinecap="round" />
-                </svg>
-              </div>
-            )}
-          </div>
+          {status === 'done' ? (
+            <CheckCircle2 className="w-20 h-20 text-[#AFFF00]" />
+          ) : status === 'error' ? (
+            <AlertCircle className="w-20 h-20 text-[#FF4D67]" />
+          ) : (
+            <div className="w-20 h-20 rounded-[22px] bg-[#1E1E1E] border border-[#2C2C2C] flex items-center justify-center">
+              <Wifi className={`w-10 h-10 text-[#D4A843] ${isDownloading ? 'animate-pulse' : ''}`} />
+            </div>
+          )}
         </div>
 
         <h3 className="text-[22px] font-semibold text-white text-center mb-3 leading-tight">
-          {status === 'done' ? '¡Descarga completa!' : status === 'error' ? 'Error de descarga' : 'Sin Wi-Fi en Sacsayhuamán'}
+          {status === 'done'
+            ? '¡Tour listo para escuchar!'
+            : status === 'error'
+            ? 'Error de descarga'
+            : status === 'downloading'
+            ? 'Descargando…'
+            : 'Llevate el tour sin internet'}
         </h3>
         <p className="text-center text-[#A6A6A6] text-[15px] mb-6">
           {status === 'done'
-            ? 'Ya podés usar Rimay sin conexión. Escuchá el tour aunque no haya señal.'
+            ? 'Ya podés escuchar el tour aunque no haya señal en las ruinas.'
             : status === 'error'
-              ? errorMsg
-              : 'Descargá el tour ahora para escucharlo sin señal cuando estés en las ruinas.'
-          }
+            ? errorMsg
+            : status === 'downloading'
+            ? `Audios del tour · ${totalMb} MB`
+            : 'En Sacsayhuamán la señal es inestable. Descargá ahora y escuchá sin cortes.'}
         </p>
 
-        {isDownloading && status !== 'error' && (
+        {status === 'downloading' && (
           <div className="mb-6">
             <div className="h-2 bg-[#2C2C2C] rounded-full overflow-hidden">
               <div className="h-full bg-[#D4A843] transition-all duration-300 rounded-full"
                 style={{ width: `${progress}%` }} />
             </div>
-            <p className="text-center text-sm text-[#6E6E6E] mt-2">{progress}% · {totalMb} MB</p>
+            <p className="text-center text-sm text-[#6E6E6E] mt-2">{progress}%</p>
           </div>
         )}
 
@@ -169,7 +165,7 @@ export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProp
 
         {status === 'idle' && (
           <p className="text-xs text-center text-[#6E6E6E] mt-2">
-            {totalMb} MB · ~30s en Wi-Fi
+            {totalMb} MB · ~30 seg en Wi-Fi
           </p>
         )}
       </div>

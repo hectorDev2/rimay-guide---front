@@ -41,7 +41,7 @@ function useTourStops() {
   const navigate = useNavigate();
   const tour = useTourStore((s) => s.tour)!;
   const completedIds = useTourStore((s) => s.completedIds);
-  const [currentStopId, setCurrentStopId] = useState(tour.stops[2]?.id ?? tour.stops[0]?.id);
+  const [currentStopId, setCurrentStopId] = useState(tour.stops[0]?.id);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadPrompted, setDownloadPrompted] = useState(false);
@@ -52,7 +52,8 @@ function useTourStops() {
   useEffect(() => {
     if (!isDownloaded && !downloadPrompted) {
       setDownloadPrompted(true);
-      setShowDownloadModal(true);
+      const timer = setTimeout(() => setShowDownloadModal(true), 800);
+      return () => clearTimeout(timer);
     }
   }, [isDownloaded, downloadPrompted]);
 

@@ -1,23 +1,26 @@
 # Rimay Guide — Guía de Audio para Tours en Cusco
 
-PWA offline-first para audio-guías con geolocalización en sitios arqueológicos de Cusco.
+PWA offline-first para audio-guías con geolocalización en sitios arqueológicos de Cusco. **Dark Neon UI**, chat IA híbrido, mapas 3D y visor Three.js.
 
 ## Stack
 
 | Capa | Tecnología |
 |------|-----------|
-| Framework | React 18 + TypeScript |
-| Bundler | Vite 6 |
-| Routing | react-router v7 (URL-based, QR-ready) |
-| State | Zustand (auth, tour, location, map, chat) |
-| UI | Tailwind CSS v4 + shadcn/ui + Motion |
-| Auth | Supabase Auth (email, Google, Apple) |
-| DB | Supabase PostgreSQL + RLS |
-| Mapa 3D | Mapbox GL JS (satellite-streets, fill-extrusion, pitch 45°) |
-| Visor 3D | Three.js + React Three Fiber + Drei |
-| Geolocalización | `navigator.geolocation.watchPosition` + Haversine |
+| Framework | React 18.3.1 + TypeScript 6 |
+| Bundler | Vite 6.3.5 |
+| Routing | React Router 7.13 (URL-based, QR-ready) |
+| Estado | Zustand 5 (6 stores, persist en tour y map) |
+| UI | Tailwind CSS 4.1 + shadcn/ui (38 Radix components) |
+| Animaciones | Motion 12 + Vaul (bottom sheets) |
+| Auth | Supabase Auth (email, Google, Apple, sesión persistente) |
+| DB | Supabase PostgreSQL + RLS + chat_sessions |
+| Mapa 3D | Mapbox GL JS 3.23 (satellite-streets, fill-extrusion, pitch 45°) |
+| Visor 3D | Three.js 0.170 + React Three Fiber + Drei |
+| Geolocalización | `navigator.geolocation.watchPosition` + Haversine ±25m |
+| IA Híbrida | Gemini API (streaming) + Fuse.js (offline) |
 | PWA | vite-plugin-pwa (Workbox, auto-update) |
-| IA | Gemini API (opcional, fallback offline con Fuse.js) |
+| i18n | react-i18next + i18next |
+| Tests | Vitest + jsdom + Testing Library (45 tests) |
 
 ---
 
@@ -26,26 +29,26 @@ PWA offline-first para audio-guías con geolocalización en sitios arqueológico
 ### 1. Autenticación
 
 ```
-App monta → initialize() → supabase.auth.getSession()
+App monta → initializeAuth() → supabase.auth.getSession()
   ├── sesión existe → setea user en authStore → isAuthenticated: true
-  └── sin sesión → isAuthenticated: false → redirect /login
+  ├── sin sesión → isAuthenticated: false → redirect /login?redirect=<path>
+  └── onAuthStateChange → actualiza authStore automáticamente
 
 LoginScreen
   ├── email/password → supabase.auth.signInWithPassword()
+  ├── signUp → supabase.auth.signUp() → email de confirmación
   ├── Google → supabase.auth.signInWithOAuth({ provider: 'google' })
   └── Apple → supabase.auth.signInWithOAuth({ provider: 'apple' })
-
-onAuthStateChange → actualiza authStore automáticamente
 ```
 
 ### 2. Routing
 
 ```
 <Routes>
-  /              → SplashRoute  (requiere auth, sino → /login)
-  /login         → LoginRoute   (si ya auth, → redirect)
-  /player?stopId=X → PlayerRoute (requiere auth)
-  /tour/:slug    → TourRoute    (QR code: /tour/sacsayhuaman)
+  /              → SplashRoute   (auth required, tour + modales)
+  /login         → LoginRoute    (si auth, redirect, soporta signUp)
+  /player        → PlayerRoute   (auth, stopId query param, geolocation)
+  /tour/:slug    → TourRoute     (valida slug, redirect a SplashRoute)
   *              → NotFoundScreen
 </Routes>
 ```
@@ -53,50 +56,58 @@ onAuthStateChange → actualiza authStore automáticamente
 ### 3. Datos
 
 ```
-Supabase PostgreSQL
-  ┌─ tours (slug, name, description)
-  ├─ tour_stops (lat, lng, radius, audioSrc, order)
-  ├─ user_progress (user_id, stop_id, completed)
-  ├─ chat_sessions (user_id, tour_id) ← único por usuario+tour
-  └─ chat_messages (session_id, role, content, feedback)
+Tour Data Flow
+  fetchTourBySlug('sacsayhuaman')
+    ├── Supabase: tours + tour_stops (con RLS)
+    └── Fallback: getHardcodedTour() desde data.ts (9 stops hardcodeados)
 
-App.tsx
-  ├─ SACSAYHUAMAN_TOUR (types.ts) ← 9 stops con coordenadas reales
-  └─ POIS (pois.ts) ← 16 POIs (9 tour + 7 culturales)
+tourStore (persist)
+  ├── tour, stops, currentStopIndex
+  ├── isDownloaded, downloadProgress, isDownloading
+  └── completedIds (persist: rimay-tour)
 
-tourStore
-  ├─ tour, stops, currentStopIndex
-  ├─ isDownloaded, downloadProgress
-  └─ completedIds (Set<string>)
+POIs (pois.ts): 15 puntos (9 tour + 6 culturales)
+  └── Categorías: templo, fortaleza, plaza, santuario, mirador, mercado, barrio, tour_stop
+
+chatStore (localStorage + Supabase)
+  ├── messages[], isOpen, isLoading, isOnline
+  ├── streamingContent (streaming en tiempo real)
+  ├── currentSessionId + Supabase upsert
+  └── feedback (rating 1/-1), pending sync queue
 ```
 
 ### 4. Geolocalización → Audio
 
 ```
-useGeolocation hook (PlayerRoute, LocationModal)
+useGeolocation hook (PlayerRoute)
   │
   ├─ watchPosition (high accuracy, cada 5s)
   ├─ Haversine a cada stop (≤25m = en rango)
   │
-  ├─ PlayerRoute: onEnterStop(id) → setNearbyStop → banner "Estás cerca de X"
-  │   └─ [Reproducir] → navigate(/player?stopId=X) → AudioPlayer
+  ├─ En rango → onEnterStop(stopId)
+  │   ├── locationStore.setNearbyStop() → banner "Estás cerca de X"
+  │   ├── Auto-cambio de stop (si diferente al actual)
+  │   └── mapStore.markDiscovered()
   │
-  └─ LocationModal: setPosition → TourMap actualiza userMarker + accuracyCircle
-      └─ findActivePoi() → geofence detection (arrived ≤ geofenceRadius)
+  └─ locationStore
+      ├── position (lat/lng/accuracy/timestamp)
+      ├── error, isWatching
+      ├── activeStopId, nearbyStop
+      └── stopWatching()
 ```
 
 ### 5. Mapa 3D (TourMap)
 
 ```
 Mapbox GL JS
-  ├─ style: satellite-streets-v12 (satélite real)
-  ├─ pitch: 45° → perspectiva 3D
-  ├─ fill-extrusion layer: 16 polígonos extruidos (25m² c/u)
-  │   └─ color y altura por categoría del POI
-  ├─ marcadores DOM (click → flyTo zoom:17 pitch:60)
-  ├─ popup HTML con nombre, descripción, botón "Ver en 3D"
-  ├─ userMarker azul + accuracyCircle (GPS real o simulado)
-  └─ NavigationControl
+  ├── style: satellite-streets-v12
+  ├── pitch: 45° → perspectiva 3D
+  ├── fill-extrusion layer: polígonos extruidos por POI
+  │   └── color y altura por categoría
+  ├── marcadores DOM (click → flyTo zoom:17 pitch:60)
+  ├── popup HTML con nombre, descripción, "Ver en 3D"
+  ├── userMarker azul + accuracyCircle (GPS real)
+  └── NavigationControl + geofencing activo
 ```
 
 ### 6. Visor 3D (SiteViewer3D)
@@ -106,46 +117,71 @@ Three.js + R3F + Drei
   │
   ├─ Canvas (shadows, antialias, fov:40)
   ├─ Iluminación: ambient + 2× directional + hemisphere
-  ├─ Modelo procedural por categoría:
+  ├─ Texturas procedurales: CanvasTexture con bump maps (piedra)
+  ├─ Modelo por categoría:
   │   ├─ templo     → pirámide escalonada + columnas trapezoidales
   │   ├─ fortaleza  → muros zigzag + torres circulares
   │   ├─ santuario  → roca deformada + altar
   │   ├─ mirador    → torre escalonada + barandas
   │   ├─ plaza      → plataforma + mojones
   │   └─ tour_stop  → cono marcador + cartel
+  ├─ GLB real: model_qoricancha.glb (4.6 MB optimizado)
   ├─ Hotspots: anillos pulsantes + labels HTML + tooltips
   ├─ OrbitControls (auto-rotate, damping, sin pan)
   └─ AudioBar: mini reproductor integrado
 ```
 
-### 7. PWA — Service Worker
+### 7. Chat IA — Arquitectura Híbrida
 
 ```
-vite-plugin-pwa (Workbox, registerType: autoUpdate)
-  ├─ precache: JS, CSS, HTML, GLB
-  ├─ runtimeCaching:
-  │   ├─ images (Unsplash) → StaleWhileRevalidate (30d)
-  │   ├─ audio MP3       → CacheFirst (90d)
-  │   ├─ modelos GLB     → CacheFirst (90d)
-  │   └─ API calls       → NetworkFirst (5s timeout)
-  └─ manifest: name, icons, theme_color (#A0522D), standalone
+sendMessage()
+  │
+  ├─ ¿Online (navigator.onLine + VITE_GEMINI_API_KEY)?
+  │     ├─ ✅ → Gemini API (gemini-3-flash-preview) streaming
+  │     │     ├─ System prompt con contexto cultural del tour
+  │     │     ├─ Streaming response → chatStore.streamingContent
+  │     │     └─ Supabase upsert (chat_sessions + chat_messages)
+  │     │
+  │     └─ ❌ → Fuse.js fuzzy search
+  │           ├─ Knowledge base: 16+ ítems culturales
+  │           ├─ Tokeniza query → fuzzy match
+  │           └─ Respuesta local con matching scores
+  │
+  └─ Persistencia dual: localStorage + Supabase
+      ├─ Messages: rimay_chat_messages (localStorage)
+      └─ Session: rimay_chat_session + supabase.chat_messages
 ```
 
-### 8. Offline Download
+### 8. PWA — Service Worker
 
 ```
-downloadWorker.ts (Web Worker)
-  ├─ postMessage({ type: 'download', urls, cacheName })
-  ├─ fetch + Cache API por cada URL
-  ├─ postMessage progreso (current, total, percent)
-  └─ soporta cancelación
+vite-plugin-pwa (registerType: autoUpdate)
+  ├── precache (≤5MB): JS, CSS, HTML, MP3, GLB, PNG, SVG
+  ├── runtimeCaching:
+  │   ├── images (Unsplash) → StaleWhileRevalidate (30d, 50 entries)
+  │   ├── audio MP3        → CacheFirst (90d, cache: rimay-audio-v1)
+  │   ├── modelos GLB      → CacheFirst (90d, cache: rimay-models-v1)
+  │   └── API calls        → NetworkFirst (5s timeout, cache: api-cache)
+  └── manifest: Rimay Guide, theme #A0522D, standalone, portrait
 ```
 
-<<<<<<< Updated upstream
-### 9. Modelos 3D — Pipeline de optimización
+### 9. Offline Download
 
 ```
-Modelos fuente (.glb, sin optimizar)
+DownloadModal
+  ├── Se muestra automáticamente al primer ingreso (si !isDownloaded)
+  ├── downloadWorker.ts (Web Worker, Cache API)
+  │   ├── postMessage({ type: 'download', urls, cacheName })
+  │   ├── fetch + Cache API por cada URL
+  │   ├── postMessage progreso (current, total, percent)
+  │   └── soporta cancelación
+  └── Al completar → AddToHomeScreen prompt
+```
+
+### 10. Modelos 3D — Pipeline de optimización
+
+```
+Modelos fuente (.glb, sin optimizar en src/public/models/source/)
   │
   ├─ 1. gltf-transform resize (texturas → 1024px)
   ├─ 2. gltfpack -cc -si 0.5 (compresión meshopt + simplificación 50%)
@@ -172,30 +208,6 @@ Destino: src/public/*.glb
 
 El pipeline está en `scripts/optimize-models.mjs`. Requiere `@gltf-transform/cli` y `gltfpack` instalados globalmente.
 
-=======
-### 9. Chat IA (Rimay IA)
-
-```
-ChatButton (FAB flotante) → toggleChat → ChatPanel (full-screen overlay)
-
-sendMessage(content, TourContext)
-  │
-  ├── Online (Gemini API) ──► streaming response
-  │     └── upsert a Supabase (sesión creada lazy en primer mensaje)
-  │
-  └── Offline (Fuse.js) ──► responde desde knowledge base local
-        └── cola pending sync → drena al reconectar
-
-Persistencia:
-  ├─ Supabase: chat_sessions(user_id, tour_id) + chat_messages
-  ├─ localStorage: rimay_chat_messages (caché offline)
-  └─ rimay_chat_pending: cola de mensajes offline por sincronizar
-
-Feedback:
-  └─ Thumbs up/down por mensaje → UPDATE chat_messages.feedback
-```
-
->>>>>>> Stashed changes
 ---
 
 ## Estructura de carpetas
@@ -203,31 +215,44 @@ Feedback:
 ```
 src/
 ├── app/
+│   ├── App.tsx                  # Container principal: routing + auth guard + layout
 │   ├── components/
-│   │   ├── atoms/          # ErrorBoundary, PageTransition, OfflineToast
-│   │   ├── organisms/      # AudioPlayer, TourMap, ChatPanel, ChatButton, LocationModal
-│   │   └── ui/             # shadcn/ui (Button, Input, etc.)
-│   ├── screens/            # LoginScreen, SplashScreen, NotFoundScreen
-│   └── App.tsx             # Router + providers
-├── hooks/                  # useGeolocation
+│   │   ├── atoms/               # ErrorBoundary, PageTransition, OfflineToast,
+│   │   │                        # ImageWithFallback, Skeleton, LanguageSwitcher
+│   │   ├── organisms/           # AudioPlayer, TourMap, ChatPanel, LocationModal,
+│   │   │                        # MiniPlayer, TourCompleteScreen, SiteViewer3D,
+│   │   │                        # DownloadModal, AddToHomeScreen, ChatButton,
+│   │   │                        # TourStopsList, DebugLocationPanel
+│   │   ├── figma/               # Componentes generados desde Figma
+│   │   └── ui/                  # shadcn/ui (38 componentes Radix)
+│   └── screens/                 # SplashScreen, LoginScreen, NotFoundScreen
+├── hooks/                       # useGeolocation (Haversine + geofencing)
 ├── lib/
-│   ├── chat/               # geminiClient, offlineSearch, tourContext, constants
-│   ├── map/                # pois, geofence, siteModels, hotspots
-│   ├── supabase/           # types (TourRow, ChatMessageRow, etc.)
-│   └── tour/               # types (TourStop, SACSAYHUAMAN_TOUR)
-├── services/               # tourData, tourService
-├── stores/                 # authStore, tourStore, locationStore, mapStore, chatStore
-├── styles/                 # index.css, tailwind.css, theme.css
-├── public/                 # modelos 3D (.glb), assets estáticos
-│   └── models/source/      # modelos sin optimizar (origen del pipeline)
-└── workers/                # downloadWorker
-
-openspec/                   # SDD artifacts (config, specs, archived changes)
+│   ├── chat/                    # geminiClient, offlineSearch, constants, tourContext
+│   ├── map/                     # pois (15 POIs), geofence, hotspots (30+), siteModels
+│   ├── tour/                    # types (Tour/TourStop), data (9 stops hardcodeados)
+│   └── supabase/                # types, supabaseClient
+├── services/                    # tourService (Supabase + fallback), translationService
+├── stores/                      # authStore, tourStore, audioStore, chatStore,
+│                                # locationStore, mapStore (con tests)
+├── styles/                      # index.css, tailwind.css, theme.css (design tokens)
+├── public/                      # model_qoricancha.glb, PWA icons, voices/
+│   └── models/source/           # modelos sin optimizar
+├── workers/                     # downloadWorker.ts (Web Worker)
+└── test/                        # setup.ts (vitest + jsdom + Testing Library)
 ```
 
 ```
 scripts/
-└── optimize-models.mjs     # pipeline de compresión gltf-transform + gltfpack
+├── optimize-models.mjs          # pipeline gltf-transform + gltfpack
+└── create-test-user.mjs         # usuario de prueba para Supabase
+```
+
+```
+supabase/
+├── migrations/                  # init.sql, cultural-context.sql
+├── seed.sql                     # datos semilla
+└── config.toml                  # configuración local Supabase
 ```
 
 ---
@@ -245,7 +270,7 @@ npm run dev
 npm i -g @gltf-transform/cli gltfpack
 ```
 
-Sin estas, `npm run optimize:models` y el `prebuild` hook fallarán. Si no trabajás con modelos 3D, podés saltearlas.
+Sin estas, `npm run optimize:models` fallará. Si no trabajás con modelos 3D, podés saltearlas.
 
 ### Variables de entorno (.env)
 
@@ -253,23 +278,29 @@ Sin estas, `npm run optimize:models` y el `prebuild` hook fallarán. Si no traba
 VITE_MAPBOX_TOKEN=pk.xxx
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJxxx
-VITE_GEMINI_API_KEY=AIzaXXX   # opcional — sin esto el chat funciona solo offline
+VITE_GEMINI_API_KEY=AIza...  # opcional, sin esto el chat usa solo offline
 ```
 
-La app requiere Supabase Auth y Mapbox. Sin token de Mapbox, el mapa muestra un fallback informativo. Sin Gemini API key, el chat responde con contenido local (knowledge base de cultura Inca).
+### Tests
+
+```bash
+npm test              # vitest run (45 tests)
+npm run test:watch    # modo watch
+```
 
 ### Base de datos
 
-Ejecutar `docs/supabase-schema.sql` en el SQL Editor de Supabase para crear tablas (tours, tour_stops, user_progress, translations, chat_sessions, chat_messages), datos semilla y políticas RLS. Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
+Ejecutar `supabase/seed.sql` en el SQL Editor de Supabase para crear tablas, datos semilla y políticas RLS. Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
 
 ---
 
 ## Stores
 
-| Store | Estado |
-|-------|--------|
-| `authStore` | user, isAuthenticated, login/signUp/socialLogin/logout |
-| `tourStore` | tour, stops, currentStopIndex, isDownloaded, completedIds |
-| `locationStore` | position (lat/lng/accuracy), isWatching, activeStopId |
-| `mapStore` | isReady, activePoi, showPopup, show3DViewer, flyToPoi |
-| `chatStore` | messages, isOpen, isLoading, isOnline, streamingContent, currentSessionId, sendMessage, toggleChat, clearChat, updateFeedback, loadSession |
+| Store | Estado clave | Persistencia |
+|-------|-------------|-------------|
+| `authStore` | user, isAuthenticated, isLoading, error | ❌ (maneja sesión vía Supabase) |
+| `tourStore` | tour, currentStopIndex, completedIds, isDownloaded, downloadProgress, isDownloading | ✅ `rimay-tour` (completedIds, isDownloaded) |
+| `audioStore` | isPlaying, currentStopId/Name, currentTime, duration, audioRef | ❌ |
+| `locationStore` | position (lat/lng/accuracy/timestamp), error, isWatching, activeStopId, nearbyStop | ❌ |
+| `mapStore` | isReady, discoveredPoiIds (Set), activePoi, showPopup, center, zoom, pitch, pendingFlyToPoiId, show3DViewer | ✅ `rimay-map` (discoveredPoiIds, center, zoom, pitch) |
+| `chatStore` | messages[], isOpen, isLoading, isOnline, streamingContent, currentSessionId | ✅ localStorage + Supabase sync |

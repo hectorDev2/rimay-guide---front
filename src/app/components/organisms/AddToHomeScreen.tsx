@@ -1,13 +1,21 @@
 import { useTranslation } from 'react-i18next';
-import { Share, Smartphone } from 'lucide-react';
+import { Share, Smartphone, MoreVertical } from 'lucide-react';
 
 interface AddToHomeScreenProps {
   onClose: () => void;
   onSkip: () => void;
 }
 
+function detectPlatform(): 'ios' | 'android' | 'other' {
+  const ua = navigator.userAgent;
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios';
+  if (/android/i.test(ua)) return 'android';
+  return 'other';
+}
+
 export function AddToHomeScreen({ onClose, onSkip }: AddToHomeScreenProps) {
   const { t } = useTranslation();
+  const platform = detectPlatform();
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50" role="dialog" aria-modal="true" aria-label={t('pwa.aria')}>
@@ -35,20 +43,39 @@ export function AddToHomeScreen({ onClose, onSkip }: AddToHomeScreenProps) {
         </p>
 
         <div className="bg-[#1E1E1E] rounded-[22px] p-4 mb-6 border border-[#2C2C2C]">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#E6FF00]/20 flex items-center justify-center">
-              <Share className="w-4 h-4 text-[#E6FF00]" />
+          {platform === 'android' ? (
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#E6FF00]/20 flex items-center justify-center">
+                <MoreVertical className="w-4 h-4 text-[#E6FF00]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-white leading-relaxed">
+                  Tocá{' '}
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#171717] rounded border border-[#2C2C2C]">
+                    <MoreVertical className="w-3 h-3 text-white" />
+                  </span>
+                  {' '}en la barra del navegador y elegí{' '}
+                  <span className="font-medium text-[#E6FF00]">Añadir a pantalla de inicio</span>
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-sm text-white">
-                {t('pwa.iosInstructions')}{' '}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#171717] rounded border border-[#2C2C2C]">
-                  <Share className="w-3 h-3 text-white" />
-                </span>
-                {' '}{t('pwa.addToHome')}
-              </p>
+          ) : (
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#E6FF00]/20 flex items-center justify-center">
+                <Share className="w-4 h-4 text-[#E6FF00]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-white leading-relaxed">
+                  Tocá{' '}
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#171717] rounded border border-[#2C2C2C]">
+                    <Share className="w-3 h-3 text-white" />
+                  </span>
+                  {' '}y luego{' '}
+                  <span className="font-medium text-[#E6FF00]">Agregar a pantalla de inicio</span>
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <button
