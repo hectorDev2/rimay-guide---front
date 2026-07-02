@@ -1,2 +1,9 @@
 .agents/*
 node_modules/
+.env
+*.sql
+!supabase/migrations/*.sql
+!supabase/seed.sql
+package-lock.json
+dist/
+.atl/

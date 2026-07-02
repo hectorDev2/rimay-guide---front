@@ -1,0 +1,161 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{xcolor}
+
+\geometry{margin=2cm}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\title{Cambios de Infraestructura — Sesión 2026-05-09}
+\author{Rimay Guide — Frontend}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Stack instalado}
+\begin{itemize}[nosep]
+  \item \texttt{zustand} v5.0.13 — state management (1~KB, sin Provider)
+  \item \texttt{vite-plugin-pwa} v1.3.0 — service worker + manifest automáticos
+  \item \texttt{react-router} v7.13.0 — routing declarativo (ya instalado, ahora usado)
+  \item \texttt{@supabase/supabase-js} v2.105.4 — cliente inicializado (sin backend aún)
+  \item \texttt{leaflet} v1.9.4 + \texttt{react-leaflet} v5.0.0 — mapa real OpenStreetMap
+\end{itemize}
+
+\section{Estructura de carpetas}
+\begin{verbatim}
+src/
+  stores/          authStore, tourStore, locationStore (Zustand)
+  hooks/           useGeolocation (watchPosition + Haversine)
+  workers/         downloadWorker (Cache API con postMessage)
+  services/        tourService (fetchTourBySlug mock)
+  lib/             supabaseClient (cliente inicializado)
+  features/        auth/, tour/ (preparado para escalar)
+\end{verbatim}
+
+\section{Arquitectura de decisiones}
+
+\begin{tabularx}{\textwidth}{l|X|X}
+  \textbf{Decisión} & \textbf{Elegido} & \textbf{Justificación} \\
+  \hline
+  State mgmt   & Zustand     & Stores por dominio, sin Provider, 1~KB. Escala con middlewares (persist, devtools). \\
+  Routing      & react-router & URLs con slug necesarias para QR codes. Soporta lazy loading. \\
+  PWA          & vite-plugin-pwa & Genera SW + manifest en build. Estrategias: SWR (imágenes), CacheFirst (MP3), NetworkFirst (API). \\
+  Mapa         & Leaflet + OSM & Gratis, sin API key, probado desde 2011. \\
+  Geo hook     & Custom (refs) & Fórmula Haversine + distance-to-stop. Refs rompen loop infinito de dependencias. \\
+  Worker       & Web Worker nativo & Sin deps. Migrable a Comlink si escala. \\
+\end{tabularx}
+
+\section{Flujo de usuario}
+\begin{center}
+  \texttt{/login} $\rightarrow$ \texttt{/} (SplashScreen con stops inline) $\rightarrow$ \texttt{/player?stopId=X}
+\end{center}
+Todas las rutas protegidas (\texttt{/}, \texttt{/player}, \texttt{/tour/:slug}) redirigen a \texttt{/login} si no hay sesión activa. El parámetro \texttt{?redirect=} preserva la ruta de destino.
+
+\section{Stores (Zustand)}
+\begin{itemize}[nosep]
+  \item \textbf{authStore}: \texttt{user}, \texttt{isAuthenticated}, \texttt{login(email, pass)}, \texttt{socialLogin(provider)}, \texttt{logout()}.
+  \item \textbf{tourStore}: \texttt{tour}, \texttt{stops}, \texttt{currentStopIndex}, \texttt{isDownloaded}, \texttt{downloadProgress}.
+  \item \textbf{locationStore}: \texttt{position} (lat, lon, accuracy, timestamp), \texttt{activeStopId}, \texttt{isWatching}.
+\end{itemize}
+
+\section{useGeolocation hook}
+\begin{itemize}[nosep]
+  \item Usa \texttt{navigator.geolocation.watchPosition} con alta precisión.
+  \item Distancia Haversine entre posición y cada parada (umbral configurable, default 5~s).
+  \item \textbf{Bug corregido}: loop infinito por \texttt{stops} en array de dependencias del \texttt{useEffect}. Solución: \texttt{useRef} actualizados vía suscripción de Zustand que retorna \texttt{null}.
+\end{itemize}
+
+\section{LocationModal (Leaflet)}
+\begin{itemize}[nosep]
+  \item Mapa con tiles de OpenStreetMap.
+  \item 9 marcadores con coordenadas reales de Sacsayhuamán ($-13.507^\circ$, $-71.981^\circ$).
+  \item Color por estado: terracota (actual), verde (completado), gris (futuro).
+  \item Posición del usuario en tiempo real con círculo de precisión.
+  \item GPS se activa manualmente (botón ``Activar GPS'' por privacidad).
+  \item Centrado automático del mapa al obtener la primera posición.
+\end{itemize}
+
+\section{DownloadWorker}
+\begin{itemize}[nosep]
+  \item Recibe array de URLs + cacheName vía \texttt{postMessage}.
+  \item Descarga cada archivo con \texttt{fetch} y lo guarda en Cache API.
+  \item Reporta progreso (\texttt{current}, \texttt{total}, \texttt{percent}) al hilo principal.
+  \item Soporta cancelación vía mensaje \texttt{cancel}.
+\end{itemize}
+
+\section{PWA — Service Worker}
+\begin{itemize}[nosep]
+  \item Generado por \texttt{vite-plugin-pwa} (workbox-based).
+  \item \textbf{App Shell}: precache de JS, CSS, HTML.
+  \item \textbf{Imágenes} (Unsplash): Stale-While-Revalidate (30 días, 50 entradas).
+  \item \textbf{Audios MP3}: CacheFirst (90 días, 100 entradas).
+  \item \textbf{API}: NetworkFirst con timeout de 5~s (1 hora, 100 entradas).
+  \item \texttt{registerType: autoUpdate} — actualiza el SW sin pedir confirmación.
+\end{itemize}
+
+\section{Qué hace la aplicación actualmente}
+\begin{itemize}[nosep]
+  \item Login con email/contraseña y Google/Apple (UI funcional, lógica mock).
+  \item SplashScreen con hero image, lista de 9 paradas inline, botón ``Ver ubicación''.
+  \item Navegación completa entre pantallas vía react-router.
+  \item Protección de rutas: si no hay sesión, redirige a \texttt{/login}.
+  \item AudioPlayer con reproducción de MP3, waveform SVG, seek, skip $\pm$15s, next/prev.
+  \item Mapa Leaflet con OpenStreetMap mostrando 9 paradas georreferenciadas en Sacsayhuamán.
+  \item Geolocalización en tiempo real con marcador de usuario y círculo de precisión.
+  \item Descarga offline (DownloadModal con UI + Web Worker para Cache API).
+  \item PWA funcional: service worker, manifest, instalable en pantalla de inicio.
+  \item Soporte para URL directa vía QR: \texttt{/tour/sacsayhuaman}.
+\end{itemize}
+
+\section{Qué no hace}
+\begin{itemize}[nosep]
+  \item No hay backend real. Los datos de tours son mock (hardcodeados en App.tsx).
+  \item No hay autenticación real. El login simula éxito sin validar contra Supabase ni ningún servidor.
+  \item No hay descarga real de archivos. El Web Worker está implementado pero el DownloadModal usa una barra de progreso simulada (setInterval).
+  \item No hay reproducción automática al entrar en rango de una parada. El hook useGeolocation detecta proximidad pero no dispara el cambio de stop en el player.
+  \item No hay persistencia de estado entre sesiones (zustand sin middleware persist).
+  \item No hay dark mode. Las variables están definidas en theme.css pero no hay toggle ni lógica.
+  \item No hay tests de ningún tipo.
+  \item No hay animaciones de transición entre pantallas.
+  \item No hay manejo de errores de red (offline detection, retry).
+  \item Solo 1 audio real (sacsayhuaman\_es.mp3). Los otros 8 son placeholders.
+\end{itemize}
+
+\section{Qué falta por hacer (próximos pasos)}
+\begin{enumerate}[nosep]
+  \item \textbf{Conectar Supabase}: reemplazar mocks en \texttt{authStore} y \texttt{tourService} por llamadas reales a Supabase Auth y PostgreSQL.
+  \item \textbf{Descarga real}: cablear el \texttt{downloadWorker} con el \texttt{DownloadModal} para descargar archivos MP3 de Supabase Storage a Cache API con progreso real.
+  \item \textbf{Trigger de audio por geolocalización}: cuando \texttt{useGeolocation} detecta que el usuario entró en el radio de una parada, navegar automáticamente a \texttt{/player?stopId=X} y reproducir.
+  \item \textbf{Manejo de offline}: mostrar banner ``Sin conexión'' cuando no hay red, usar datos cacheados (SW) para la UI, degradar gracefulmente.
+  \item \textbf{Persistencia de sesión}: middleware \texttt{persist} de Zustand para guardar auth token, tour descargado y stops completados en localStorage/IndexedDB.
+  \item \textbf{Dark mode}: implementar toggle con \texttt{next-themes} (ya instalado) y adaptar componentes a variables \texttt{.dark}.
+  \item \textbf{Transiciones}: animar cambios de ruta con \texttt{motion} (framer-motion, ya instalado) — slide, fade entre pantallas.
+  \item \textbf{Audios restantes}: producir y subir los 8 archivos MP3 faltantes para completar el tour de Sacsayhuamán.
+  \item \textbf{Tests}: configurar Vitest + React Testing Library, testear stores, hooks y componentes críticos (auth, player, geolocalización).
+  \item \textbf{CI/CD}: GitHub Actions para lint, typecheck, test y deploy a Vercel/Netlify.
+  \item \textbf{Accesibilidad}: revisar contraste, focus traps en modales, \texttt{aria-*} labels, soporte lector de pantalla.
+  \item \textbf{Optimización}: lazy loading de rutas (\texttt{React.lazy}), code splitting por feature, análisis de bundle.
+\end{enumerate}
+
+\section{Correcciones}
+\begin{itemize}[nosep]
+  \item \textbf{tsconfig.json}: creado con \texttt{strict: true}, paths \texttt{@/*}, soporte WebWorker.
+  \item \textbf{Colores}: LoginScreen migrado de \texttt{\#1a365d} a \texttt{var(--terracotta)}.
+  \item \textbf{AudioPlayer}: \texttt{isPlaying} arranca en \texttt{false} (sin auto-reproducción). Botón ``Volver'' agregado.
+  \item \textbf{LoginRoute/SplashRoute}: ahora ambas exigen autenticación.
+  \item \textbf{.env}: variables \texttt{VITE\_SUPABASE\_URL} y \texttt{VITE\_SUPABASE\_ANON\_KEY} placeholder.
+\end{itemize}
+
+\vfill
+\hrule
+\small \textbf{Archivos nuevos}: 13 (stores, hooks, workers, services, lib, tsconfig, .env). \\
+\textbf{Archivos modificados}: 7 (App.tsx, main.tsx, vite.config.ts, SplashScreen, LoginScreen, AudioPlayer, TourStopsList, index.css). \\
+\textbf{Build}: exitoso, 0 errores. Bundle final: 461~KB JS + 120~KB CSS (gzip: 142~KB + 23~KB).
+
+\end{document}

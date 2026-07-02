@@ -1,79 +1,168 @@
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Play, MapPin, ChevronDown, Smartphone } from 'lucide-react';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
+import { LanguageSwitcher } from '../components/atoms/LanguageSwitcher';
+import type { TourStopDisplay } from '../components/organisms/TourStopsList';
 
 interface SplashScreenProps {
-  onStartTour: () => void;
-  onShowAllStops: () => void;
-  isDownloaded: boolean;
-  onShowDownload: () => void;
+  tourName: string;
+  stops: TourStopDisplay[];
+  currentStopId: string;
+  onSelectStop: (id: string) => void;
+  onShowLocation: () => void;
+  onShowAddToHome: () => void;
 }
 
-export function SplashScreen({ onStartTour, onShowAllStops, isDownloaded, onShowDownload }: SplashScreenProps) {
+export function SplashScreen({
+  tourName,
+  stops,
+  currentStopId,
+  onSelectStop,
+  onShowLocation,
+  onShowAddToHome,
+}: SplashScreenProps) {
+  const { t } = useTranslation();
+  const stopsRef = useRef<HTMLDivElement>(null);
+
+  const scrollToStops = () => {
+    stopsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="h-full flex flex-col bg-[var(--warm-white)]">
-      <div className="relative h-[45vh] overflow-hidden">
+    <div className="h-full flex flex-col bg-[#0E0E0E] overflow-y-auto">
+      <div className="absolute inset-0">
         <ImageWithFallback
           src="https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800&q=85"
           alt="Sacsayhuamán megalithic stones at golden hour"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover opacity-50"
+          loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--warm-white)]"></div>
-
-        <div className="absolute top-8 left-0 right-0 text-center px-6">
-          <div className="inline-block px-4 py-2 bg-[var(--terracotta)] rounded-lg mb-2">
-            <svg className="w-6 h-6 inline-block mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <h1 className="text-4xl text-white drop-shadow-lg" style={{ fontFamily: 'var(--font-heading)' }}>Rimay Guide</h1>
-          <p className="text-white/90 mt-1 text-sm">Escuchá el Cusco como lo cuenta su gente</p>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-[#0E0E0E]/40 to-transparent" />
       </div>
 
-      <div className="flex-1 px-6 py-8 flex flex-col">
-        <div className="mb-6">
-          <h2 className="text-3xl mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Sacsayhuamán — Fortaleza del Sol</h2>
-          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-            <span>Parada 3 de 9</span>
-            <span>•</span>
-            <span>Plaza del Inca</span>
-          </div>
-        </div>
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
 
-        <div className="space-y-3 mt-auto">
-          {isDownloaded ? (
-            <button
-              onClick={onStartTour}
-              className="w-full py-4 rounded-2xl bg-[var(--terracotta)] text-white hover:bg-[#8B4513] transition-colors"
-            >
-              Iniciar narración
-            </button>
-          ) : (
-            <button
-              onClick={onShowDownload}
-              className="w-full py-4 rounded-2xl bg-[var(--terracotta)] text-white hover:bg-[#8B4513] transition-colors"
-            >
-              Descargar tour
-            </button>
-          )}
-
-          <button
-            onClick={onShowAllStops}
-            className="w-full py-4 rounded-2xl border-2 border-[var(--terracotta)] text-[var(--terracotta)] hover:bg-[var(--terracotta)]/5 transition-colors"
-          >
-            Ver todas las paradas
-          </button>
-        </div>
-
-        {isDownloaded && (
-          <div className="mt-6 p-4 bg-[var(--sage-green)]/10 rounded-xl flex items-center gap-3">
-            <svg className="w-5 h-5 text-[var(--sage-green)]" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+      <div className="relative flex-1 flex flex-col justify-between text-white">
+        <div className="pt-[52px] px-5 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-[22px] bg-white/10 backdrop-blur-[20px] border border-white/10 mb-5 shadow-lg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#E6FF00" strokeWidth="2" className="w-8 h-8">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
             </svg>
-            <span className="text-sm text-[var(--dark-charcoal)]">Sin conexión · Audio descargado ✓</span>
           </div>
-        )}
+          <h1 className="text-[40px] font-bold drop-shadow-lg leading-tight">
+            Rimay Guide
+          </h1>
+          <p className="text-white/60 mt-2 text-[15px] font-medium">
+            {t('login.subtitle')}
+          </p>
+        </div>
+
+        <div className="bg-[#171717] rounded-t-[30px] px-5 pt-6 pb-5 shadow-[0_-10px_30px_rgba(0,0,0,0.35)] mt-8 border-t border-[#2C2C2C]/50">
+          <h2 className="text-[24px] font-semibold text-white mb-1">
+            {tourName}
+          </h2>
+          <div className="flex items-center gap-2 text-[13px] text-[#6E6E6E] mb-6">
+            <span>{t('splash.stops', { count: stops.length })}</span>
+            <span className="w-1 h-1 rounded-full bg-[#6E6E6E]" />
+            <span>{t('splash.duration', { min: 45 })}</span>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <button
+              onClick={() => onSelectStop(currentStopId)}
+              className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all"
+            >
+              <Play className="w-5 h-5" fill="#111111" />
+              {t('splash.start')}
+            </button>
+
+            <button
+              onClick={onShowLocation}
+              className="w-full h-14 rounded-full bg-[#1E1E1E] text-white text-[15px] font-medium flex items-center justify-center gap-2 border border-[#2C2C2C] active:scale-[0.96] transition-all"
+            >
+              <MapPin className="w-5 h-5 text-[#E6FF00]" />
+              {t('splash.viewLocation')}
+            </button>
+
+            <button
+              onClick={scrollToStops}
+              className="w-full h-14 rounded-full text-[#A6A6A6] text-[15px] font-medium flex items-center justify-center gap-2 active:scale-[0.96] transition-all"
+            >
+              <ChevronDown className="w-5 h-5" />
+              {t('splash.viewStops')}
+            </button>
+
+            <button
+              onClick={onShowAddToHome}
+              className="w-full text-center text-[13px] text-[#6E6E6E] hover:text-white transition-colors flex items-center justify-center gap-1.5 py-1"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              {t('pwa.title')}
+            </button>
+          </div>
+
+          <div ref={stopsRef} className="border-t border-[#2C2C2C] pt-4">
+            <h3 className="text-[11px] font-semibold text-[#6E6E6E] uppercase tracking-wider mb-3">
+              {t('splash.tourStopsTitle')}
+            </h3>
+            <div className="space-y-1">
+              {stops.map((stop, index) => {
+                const isActive = stop.id === currentStopId;
+
+                return (
+                  <button
+                    key={stop.id}
+                    onClick={() => onSelectStop(stop.id)}
+                    className={`w-full flex items-center gap-3 py-3 px-3 rounded-[16px] text-left transition-all ${
+                      isActive
+                        ? 'bg-[#E6FF00]/10 border border-[#E6FF00]/20'
+                        : 'hover:bg-[#1E1E1E] border border-transparent'
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-medium ${
+                        stop.status === 'completed'
+                          ? 'bg-[#AFFF00] text-[#111111]'
+                          : isActive
+                            ? 'bg-[#E6FF00] text-[#111111]'
+                            : 'bg-[#1E1E1E] text-[#6E6E6E]'
+                      }`}
+                    >
+                      {stop.status === 'completed' ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[15px] truncate ${
+                        isActive ? 'text-[#E6FF00] font-medium' : 'text-white'
+                      }`}>
+                        {stop.name}
+                      </p>
+                      <p className="text-[11px] text-[#6E6E6E]">{stop.duration}</p>
+                    </div>
+
+                    {isActive && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-[#E6FF00] rounded-full shadow-[0_0_8px_rgba(230,255,0,0.6)] animate-pulse" />
+                        <span className="text-[11px] text-[#E6FF00] font-medium">{t('player.playing')}</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
