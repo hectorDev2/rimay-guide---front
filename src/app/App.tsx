@@ -27,6 +27,14 @@ import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
 import { toDisplayStops } from '@/lib/tour/types';
 import { fetchTourBySlug } from '@/services/tourService';
+import { RequireAdmin } from './admin/RequireAdmin';
+import { AdminLayout } from './admin/AdminLayout';
+import { AdminDashboardScreen } from './admin/screens/AdminDashboardScreen';
+import { AdminToursScreen } from './admin/screens/AdminToursScreen';
+import { AdminTourEditScreen } from './admin/screens/AdminTourEditScreen';
+import { AdminStopsScreen } from './admin/screens/AdminStopsScreen';
+import { AdminStopPreviewScreen } from './admin/screens/AdminStopPreviewScreen';
+import { AdminTranslationScreen } from './admin/screens/AdminTranslationScreen';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -392,18 +400,20 @@ export default function App() {
   const [isTourLoading, setIsTourLoading] = useState(!tour);
   const [tourError, setTourError] = useState<string | null>(null);
   const isLandingPage = location.pathname === '/';
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
   useEffect(() => {
+    if (isAdminPage) return;
     if (tour) return;
     fetchTourBySlug('sacsayhuaman')
       .then(setTour)
       .catch((err) => setTourError(err.message))
       .finally(() => setIsTourLoading(false));
-  }, [tour, setTour]);
+  }, [tour, setTour, isAdminPage]);
 
   const retry = useCallback(() => {
     setIsTourLoading(true);
@@ -413,6 +423,26 @@ export default function App() {
       .catch((err) => setTourError(err.message))
       .finally(() => setIsTourLoading(false));
   }, [setTour]);
+
+  if (isAdminPage) {
+    return (
+      <ErrorBoundary>
+        <div className="size-full dark">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
+              <Route index element={<AdminDashboardScreen />} />
+              <Route path="tours" element={<AdminToursScreen />} />
+              <Route path="tours/:tourId" element={<AdminTourEditScreen />} />
+              <Route path="tours/:tourId/stops" element={<AdminStopsScreen />} />
+              <Route path="tours/:tourId/stops/:stopId/preview" element={<AdminStopPreviewScreen />} />
+              <Route path="translations" element={<AdminTranslationScreen />} />
+            </Route>
+            <Route path="*" element={<NotFoundScreen />} />
+          </Routes>
+        </div>
+      </ErrorBoundary>
+    );
+  }
 
   if (isAuthLoading) {
     return (

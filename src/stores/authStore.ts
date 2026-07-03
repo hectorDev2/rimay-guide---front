@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import type { ProfileRow } from '@/lib/supabase/types';
 
 interface AuthState {
   user: User | null;
+  profile: ProfileRow | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -13,29 +16,58 @@ interface AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   initialize: () => void;
+  loadProfile: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
+  profile: null,
   isAuthenticated: false,
+  isAdmin: false,
   isLoading: true,
   error: null,
 
+  loadProfile: async () => {
+    const user = get().user;
+    if (!user) {
+      set({ profile: null, isAdmin: false });
+      return;
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (error || !data) {
+      set({ profile: null, isAdmin: false });
+      return;
+    }
+    set({ profile: data as ProfileRow, isAdmin: data.role === 'admin' });
+  },
+
   initialize: () => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       set({
         user: session?.user ?? null,
         isAuthenticated: !!session,
         isLoading: false,
       });
+      if (session?.user) {
+        await get().loadProfile();
+      }
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
       set({
         user: session?.user ?? null,
         isAuthenticated: !!session,
         isLoading: false,
       });
+      if (session?.user) {
+        await get().loadProfile();
+      } else {
+        set({ profile: null, isAdmin: false });
+      }
     });
   },
 
@@ -78,7 +110,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, profile: null, isAuthenticated: false, isAdmin: false });
   },
 
   clearError: () => set({ error: null }),

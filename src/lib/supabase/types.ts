@@ -38,3 +38,21 @@ export interface ChatMessageRow {
   feedback: number | null;
   created_at: string;
 }
+
+export interface ProfileRow {
+  id: string;
+  role: 'user' | 'admin';
+  display_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TranslationRow {
+  id: number;
+  namespace: string;
+  key: string;
+  value: string;
+  lang: string;
+  created_at: string;
+  updated_at: string;
+}
