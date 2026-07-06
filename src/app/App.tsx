@@ -9,6 +9,7 @@ import { LandingScreen } from './screens/LandingScreen';
 import { AudioPlayer } from './components/organisms/AudioPlayer';
 import { TourStopsList, type TourStopDisplay } from './components/organisms/TourStopsList';
 import { LocationModal } from './components/organisms/LocationModal';
+import { StopDetailSheet } from './components/organisms/StopDetailSheet';
 import { DownloadModal } from './components/organisms/DownloadModal';
 import { AddToHomeScreen } from './components/organisms/AddToHomeScreen';
 
@@ -34,6 +35,8 @@ import { AdminToursScreen } from './admin/screens/AdminToursScreen';
 import { AdminTourEditScreen } from './admin/screens/AdminTourEditScreen';
 import { AdminStopsScreen } from './admin/screens/AdminStopsScreen';
 import { AdminStopPreviewScreen } from './admin/screens/AdminStopPreviewScreen';
+import { AdminStopContentScreen } from './admin/screens/AdminStopContentScreen';
+import { AdminContentTypesScreen } from './admin/screens/AdminContentTypesScreen';
 import { AdminTranslationScreen } from './admin/screens/AdminTranslationScreen';
 import {
   AlertDialog,
@@ -188,6 +191,7 @@ function PlayerRoute() {
   const completedIds = useTourStore((s) => s.completedIds);
   const tour = useTourStore((s) => s.tour);
   const [showStopsList, setShowStopsList] = useState(false);
+  const [showStopDetail, setShowStopDetail] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [showTourComplete, setShowTourComplete] = useState(false);
 
@@ -243,7 +247,18 @@ function PlayerRoute() {
         onPrev={t.handlePrev}
         nextStopName={t.getNextStopName(currentStop.id)}
         onBack={() => navigate('/')}
+        onShowDetails={() => setShowStopDetail(true)}
       />
+
+      <AnimatePresence>
+        {showStopDetail && (
+          <StopDetailSheet
+            stopId={currentStop.id}
+            stopName={currentStop.name}
+            onClose={() => setShowStopDetail(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showStopsList && (

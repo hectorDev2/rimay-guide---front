@@ -4,7 +4,7 @@ const WAVEFORM_HEIGHTS = Array.from({ length: WAVEFORM_BARS }, () => Math.random
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle, ArrowLeft } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ChevronUp, Plus, X, MessageSquare, Lightbulb, HelpCircle, ArrowLeft, BookOpen } from 'lucide-react';
 import { useTourStore } from '@/stores/tourStore';
 import { useAudioStore } from '@/stores/audioStore';
 import type { TourStopDisplay } from './TourStopsList';
@@ -16,9 +16,10 @@ interface AudioPlayerProps {
   onPrev: () => void;
   nextStopName?: string;
   onBack?: () => void;
+  onShowDetails?: () => void;
 }
 
-export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopName, onBack }: AudioPlayerProps) {
+export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopName, onBack, onShowDetails }: AudioPlayerProps) {
   const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -217,6 +218,16 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
                 aria-label={t('player.back')}
               >
                 <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+            )}
+            {onShowDetails && (
+              <button
+                onClick={onShowDetails}
+                className="w-12 h-12 rounded-full bg-[#1E1E1E] flex items-center justify-center hover:bg-[#2C2C2C] transition-colors"
+                aria-label="Ver detalle del lugar"
+                title="Detalle del lugar"
+              >
+                <BookOpen className="w-5 h-5 text-white" />
               </button>
             )}
           </div>

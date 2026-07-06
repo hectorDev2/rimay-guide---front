@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { CheckCircle2, AlertCircle, Wifi, Smartphone } from 'lucide-react';
 import { useTourStore } from '@/stores/tourStore';
+import { fetchTourMediaUrls } from '@/services/contentService';
 
 interface DownloadModalProps {
   onClose: () => void;
@@ -19,10 +20,18 @@ export function DownloadModal({ onClose, onDownloadComplete }: DownloadModalProp
   const [errorMsg, setErrorMsg] = useState('');
   const workerRef = useRef<Worker | null>(null);
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = useCallback(async () => {
     if (!tour) return;
 
-    const urls = getUniqueAudioUrls(tour.stops);
+    // Audio legado + todos los medios publicados (imágenes, galerías, audios).
+    // Los model3d quedan fuera: se descargan bajo demanda al abrir el visor.
+    let contentUrls: string[] = [];
+    try {
+      contentUrls = await fetchTourMediaUrls(tour.id);
+    } catch {
+      // sin conexión a la BD: se descarga al menos el audio legado
+    }
+    const urls = [...new Set([...getUniqueAudioUrls(tour.stops), ...contentUrls])];
     if (urls.length === 0) {
       setErrorMsg('No hay audio para descargar');
       setStatus('error');

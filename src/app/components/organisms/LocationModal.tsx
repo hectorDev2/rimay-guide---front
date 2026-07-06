@@ -8,6 +8,8 @@ import { useMapStore } from '@/stores/mapStore';
 import { POIS } from '@/lib/map/pois';
 import { SiteViewer3D } from './SiteViewer3D';
 import { LocationModalSkeleton } from '@/app/components/atoms/Skeleton';
+import { useStopContents } from '@/hooks/useStopContents';
+import { has3DExperience } from '@/lib/content/types';
 import type { TourStopDisplay } from './TourStopsList';
 
 const TourMap = lazy(() => import('./TourMap').then((m) => ({ default: m.TourMap })));
@@ -39,6 +41,10 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
   const setActivePoi = useMapStore((s) => s.setActivePoi);
   const show3DViewer = useMapStore((s) => s.show3DViewer);
   const setShow3DViewer = useMapStore((s) => s.setShow3DViewer);
+
+  // Lugares Tipo 1 = tienen bloque model3d publicado; el resto no muestra nada 3D
+  const { blocks: activePoiBlocks } = useStopContents(activePoi?.tourStopId);
+  const activePoiHas3D = has3DExperience(activePoiBlocks);
 
   const handleEnableGeo = () => {
     setGeoEnabled(true);
@@ -196,6 +202,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                     </span>
                   </div>
                    <div className="flex items-center gap-1.5">
+                    {activePoiHas3D && (
                     <button
                       onClick={() => setShow3DViewer(true)}
                       className="flex-shrink-0 px-2.5 h-7 rounded-full bg-[#E6FF00] hover:bg-[#D6F500] flex items-center gap-1 text-[#111111] text-[11px] font-semibold transition-all shadow-[0_4px_12px_rgba(230,255,0,0.3)] active:scale-90"
@@ -204,6 +211,7 @@ export function LocationModal({ stops, onClose }: LocationModalProps) {
                       <Box className="w-3 h-3" />
                       3D
                     </button>
+                    )}
                     <button
                       onClick={() => { setActivePoi(null); setShowPopup(false); }}
                       className="flex-shrink-0 w-6 h-6 rounded-full bg-[#1E1E1E] hover:bg-[#2C2C2C] flex items-center justify-center text-[#6E6E6E]"
