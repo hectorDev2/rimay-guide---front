@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Eye } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Eye, LayoutGrid } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { adminStopService } from '@/services/admin/adminStopService';
@@ -141,6 +141,13 @@ export function AdminStopsScreen() {
                   title="Editar"
                 >
                   <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => navigate(`/admin/tours/${tourId}/stops/${stop.id}/content`)}
+                  className="p-2 rounded-lg text-[#6E6E6E] hover:text-[#E6FF00] hover:bg-[#0E0E0E] transition-colors"
+                  title="Contenido"
+                >
+                  <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(stop.id, stop.name)}

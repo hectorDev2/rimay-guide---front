@@ -1,10 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router';
 import { useAuthStore } from '@/stores/authStore';
-import { LayoutDashboard, Map, MapPin, Languages, LogOut } from 'lucide-react';
+import { LayoutDashboard, Map, MapPin, Languages, LogOut, Boxes } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/tours', label: 'Tours', icon: Map },
+  { to: '/admin/content-types', label: 'Tipos de contenido', icon: Boxes },
   { to: '/admin/translations', label: 'Traducciones', icon: Languages },
 ];
 

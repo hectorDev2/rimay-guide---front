@@ -450,6 +450,8 @@ export default function App() {
               <Route path="tours/:tourId" element={<AdminTourEditScreen />} />
               <Route path="tours/:tourId/stops" element={<AdminStopsScreen />} />
               <Route path="tours/:tourId/stops/:stopId/preview" element={<AdminStopPreviewScreen />} />
+              <Route path="tours/:tourId/stops/:stopId/content" element={<AdminStopContentScreen />} />
+              <Route path="content-types" element={<AdminContentTypesScreen />} />
               <Route path="translations" element={<AdminTranslationScreen />} />
             </Route>
             <Route path="*" element={<NotFoundScreen />} />
