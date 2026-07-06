@@ -22,6 +22,28 @@ export interface TourStopRow {
   created_at: string;
 }
 
+export interface ContentTypeRow {
+  slug: string;
+  label: string;
+  icon: string | null;
+  media_kind: 'image' | 'audio' | 'model' | 'video' | 'none';
+  enabled: boolean;
+}
+
+export interface StopContentRow {
+  id: string;
+  stop_id: string;
+  type: string;
+  title: string | null;
+  description: string | null;
+  file_path: string | null;
+  metadata: Record<string, unknown>;
+  order: number;
+  status: 'draft' | 'published' | 'archived';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ChatSessionRow {
   id: string;
   user_id: string;

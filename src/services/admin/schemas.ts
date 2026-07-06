@@ -50,6 +50,21 @@ export const stopSchema = z.object({
 
 export type StopInput = z.infer<typeof stopSchema>;
 
+export const contentSchema = z.object({
+  type: z.string().min(1, 'Tipo requerido'),
+  title: z.string().max(120, 'Máximo 120 caracteres').optional().or(z.literal('')),
+  description: z.string().max(3000, 'Máximo 3000 caracteres').optional().or(z.literal('')),
+  filePath: z.string().max(500).optional().or(z.literal('')),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  order: z
+    .number({ invalid_type_error: 'Debe ser un número' })
+    .int('Debe ser entero')
+    .nonnegative('No puede ser negativo'),
+  status: z.enum(['draft', 'published', 'archived']),
+});
+
+export type ContentInput = z.infer<typeof contentSchema>;
+
 export const translationSchema = z.object({
   namespace: z.string().min(1, 'Requerido').max(50, 'Máximo 50 caracteres'),
   key: z.string().min(1, 'Requerido').max(100, 'Máximo 100 caracteres'),
