@@ -2,6 +2,8 @@
 
 PWA offline-first para audio-guías con geolocalización en sitios arqueológicos de Cusco. **Dark Neon UI**, chat IA híbrido, mapas 3D y visor Three.js.
 
+**Estrategia de contenido:** la experiencia base de cada parada es fotografías + audioguía + historia + datos curiosos (lugares *Tipo 2*). El 3D es una experiencia especial solo para lugares con modelos de alta calidad (*Tipo 1*). Cada parada tiene bloques de contenido dinámicos (`stop_contents`); un lugar "es Tipo 1" simplemente porque tiene un bloque `model3d` publicado — sin flags. Ver `docs/ARCHITECTURE-CONTENT.md`.
+
 ## Stack
 
 | Capa | Tecnología |
@@ -59,6 +61,8 @@ LoginScreen
 Tour Data Flow
   fetchTourBySlug('sacsayhuaman')
     ├── Supabase: tours + tour_stops (con RLS)
+    ├── Hidratación: fetchContentsByTour() → audioSrc/culturalContext/imageUrl
+    │   desde stop_contents (fuente de verdad; columnas legadas como fallback)
     └── Fallback: getHardcodedTour() desde data.ts (9 stops hardcodeados)
 
 tourStore (persist)
@@ -74,6 +78,33 @@ chatStore (localStorage + Supabase)
   ├── streamingContent (streaming en tiempo real)
   ├── currentSessionId + Supabase upsert
   └── feedback (rating 1/-1), pending sync queue
+```
+
+### 3b. Contenido dinámico por parada
+
+```
+content_types (registro de tipos: image, gallery, audio, info, facts, model3d)
+  └── Agregar video/AR mañana = un INSERT (o el form del admin), sin migrar
+
+stop_contents (bloques por parada)
+  ├── type, title, description, file_path, metadata JSONB, order
+  ├── status: draft → published → archived (flujo editorial)
+  └── RLS: público solo published; escritura is_admin()
+
+Frontend (src/lib/content/)
+  ├── registry.tsx → <ContentBlocks>: renderiza según el type registrado
+  │   ├── Tipos sin renderer se ignoran (nunca secciones vacías ni errores)
+  │   └── model3d → ModelViewer lazy (three.js solo carga en lugares Tipo 1)
+  ├── useStopContents(stopId) → hook con caché en memoria
+  └── StopDetailSheet → detalle de parada 100% desde bloques (botón 📖 en player)
+
+Admin
+  ├── /admin/tours/:id/stops/:id/content → CRUD de bloques, orden,
+  │   publicar/despublicar/archivar, upload a Storage (bucket media)
+  └── /admin/content-types → habilitar/deshabilitar y registrar tipos nuevos
+
+Audio: 9 narraciones por parada en /voices/{female,male}/parada_N_*.mp3
+  (femenina por defecto; ambas voces en metadata.voices para futuro selector)
 ```
 
 ### 4. Geolocalización → Audio
@@ -111,6 +142,8 @@ Mapbox GL JS
 ```
 
 ### 6. Visor 3D (SiteViewer3D)
+
+Solo accesible en lugares **Tipo 1**: el botón "3D" del mapa aparece únicamente si la parada tiene un bloque `model3d` publicado (`has3DExperience()`).
 
 ```
 Three.js + R3F + Drei
@@ -170,6 +203,8 @@ vite-plugin-pwa (registerType: autoUpdate)
 ```
 DownloadModal
   ├── Se muestra automáticamente al primer ingreso (si !isDownloaded)
+  ├── URLs: audio legado + fetchTourMediaUrls() (imágenes/galerías/audios
+  │   publicados de stop_contents); los model3d se cargan bajo demanda
   ├── downloadWorker.ts (Web Worker, Cache API)
   │   ├── postMessage({ type: 'download', urls, cacheName })
   │   ├── fetch + Cache API por cada URL
@@ -225,19 +260,27 @@ src/
 │   │   │                        # TourStopsList, DebugLocationPanel
 │   │   ├── figma/               # Componentes generados desde Figma
 │   │   └── ui/                  # shadcn/ui (38 componentes Radix)
+│   ├── admin/                   # AdminLayout, RequireAdmin + screens/
+│   │   └── screens/             # Dashboard, Tours, Stops, StopContent (bloques),
+│   │                            # ContentTypes, StopPreview, Translations
 │   └── screens/                 # SplashScreen, LoginScreen, NotFoundScreen
-├── hooks/                       # useGeolocation (Haversine + geofencing)
+├── hooks/                       # useGeolocation, useStopContents (bloques con caché)
 ├── i18n/                        # react-i18next + fallbacks ES/EN
 ├── lib/
 │   ├── chat/                    # geminiClient, offlineSearch, constants (28 items), tourContext
+│   ├── content/                 # types (ContentBlock), registry (<ContentBlocks>),
+│   │                            # ModelViewer (visor 3D lazy)
 │   ├── map/                     # pois (16 POIs), geofence, hotspots (30+), siteModels
 │   ├── tour/                    # types (Tour/TourStop), data (9 stops hardcodeados)
 │   └── supabase/                # types, supabaseClient
-├── services/                    # tourService (Supabase + fallback), translationService
+├── services/                    # tourService, contentService, translationService
+│   └── admin/                   # adminTourService, adminStopService,
+│                                # adminContentService, schemas (zod)
 ├── stores/                      # authStore, tourStore, audioStore, chatStore,
 │                                # locationStore, mapStore (con tests)
 ├── styles/                      # index.css, tailwind.css, theme.css (design tokens)
-├── public/                      # model_qoricancha.glb, PWA icons, voices/
+├── public/                      # model_qoricancha.glb, PWA icons
+│   ├── voices/female|male/      # 9 narraciones por parada × 2 voces
 │   └── models/source/           # modelos sin optimizar
 ├── workers/                     # downloadWorker.ts (Web Worker)
 └── test/                        # setup.ts (vitest + jsdom + Testing Library)
@@ -251,8 +294,11 @@ scripts/
 
 ```
 supabase/
-├── migrations/                  # init.sql, cultural-context.sql
-├── seed.sql                     # datos semilla
+├── migrations/                  # init, cultural-context, content-blocks
+│                                # (+ drop-legacy-content-columns, fechada a futuro)
+├── seed.sql                     # datos semilla (tours, stops, translations)
+├── seed_contents.sql            # bloques de contenido demo (idempotente)
+├── update_voices.sql            # narraciones por parada (female/male)
 └── config.toml                  # configuración local Supabase
 ```
 
@@ -291,7 +337,16 @@ npm run test:watch    # modo watch
 
 ### Base de datos
 
-Ejecutar `supabase/seed.sql` en el SQL Editor de Supabase para crear tablas, datos semilla y políticas RLS. Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
+Orden de ejecución en el SQL Editor de Supabase (o `supabase db push` para las migraciones):
+
+1. Migraciones de `supabase/migrations/` (crean tablas, `content_types`, `stop_contents`, RLS, bucket `media`)
+2. `supabase/seed.sql` — tours, paradas y traducciones
+3. `supabase/seed_contents.sql` — bloques de contenido demo (Tipo 2 completo en las 9 paradas + `model3d` en 2)
+4. `supabase/update_voices.sql` — narraciones por parada (voz femenina por defecto, ambas en `metadata.voices`)
+
+La migración `drop-legacy-content-columns` está fechada a futuro: aplicarla solo después de desplegar el frontend que hidrata desde `stop_contents`.
+
+Usuario de prueba: `turista@rimay.pe` / `Rimay2025!` (crear vía `scripts/create-test-user.mjs`).
 
 ---
 
