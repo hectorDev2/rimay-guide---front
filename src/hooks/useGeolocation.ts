@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useLocationStore } from '@/stores/locationStore';
-import { useTourStore } from '@/stores/tourStore';
-import type { TourStop } from '@/lib/tour/types';
+
+interface GeolocationStop {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  status?: 'completed' | 'current' | 'future';
+}
 
 function calculateDistance(
   lat1: number,
@@ -23,14 +29,15 @@ function calculateDistance(
 function findNearestStopInRange(
   lat: number,
   lon: number,
-  stops: TourStop[],
-): TourStop | null {
-  let nearest: { stop: TourStop; distance: number } | null = null;
+  stops: GeolocationStop[],
+): GeolocationStop | null {
+  let nearest: { stop: GeolocationStop; distance: number } | null = null;
 
   for (const stop of stops) {
     if (stop.status === 'completed') continue;
     const distance = calculateDistance(lat, lon, stop.latitude, stop.longitude);
-    if (distance <= 25) {
+    const radius = stop.radiusMeters;
+    if (distance <= radius) {
       if (!nearest || distance < nearest.distance) {
         nearest = { stop, distance };
       }
@@ -41,20 +48,21 @@ function findNearestStopInRange(
 }
 
 interface NearbyResult {
-  stop: TourStop;
+  stop: GeolocationStop;
   distance: number;
 }
 
 function findNearbyStop(
   lat: number,
   lon: number,
-  stops: TourStop[],
+  stops: GeolocationStop[],
 ): NearbyResult | null {
   let nearest: NearbyResult | null = null;
 
   for (const stop of stops) {
     const distance = calculateDistance(lat, lon, stop.latitude, stop.longitude);
-    if (distance <= 100 && distance > 25) {
+    const radius = stop.radiusMeters;
+    if (distance > radius && distance <= 100) {
       if (!nearest || distance < nearest.distance) {
         nearest = { stop, distance };
       }
@@ -68,14 +76,14 @@ interface UseGeolocationOptions {
   enabled?: boolean;
   highAccuracy?: boolean;
   interval?: number;
-  stops?: TourStop[];
+  stops?: GeolocationStop[];
   onEnterStop?: (stopId: string) => void;
 }
 
 export function useGeolocation(options: UseGeolocationOptions = {}) {
   const { enabled = false, highAccuracy = true, interval = 5000, stops = [], onEnterStop } = options;
   const watchIdRef = useRef<number | null>(null);
-  const stopsRef = useRef<TourStop[]>(stops);
+  const stopsRef = useRef<GeolocationStop[]>(stops);
   const onEnterStopRef = useRef(onEnterStop);
   const lastActiveRef = useRef<string | null>(null);
 

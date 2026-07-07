@@ -8,7 +8,7 @@ function toTour(row: TourRow): Tour {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    description: row.description,
+    description: row.description ?? '',
     totalDurationMinutes: row.total_duration_minutes,
     stops: [],
   };

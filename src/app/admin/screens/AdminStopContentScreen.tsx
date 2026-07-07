@@ -24,6 +24,7 @@ export function AdminStopContentScreen() {
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [types, setTypes] = useState<ContentTypeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ContentBlock | null>(null);
   const [creatingType, setCreatingType] = useState<ContentTypeRow | null>(null);
 
@@ -33,9 +34,12 @@ export function AdminStopContentScreen() {
       .then(([b, t]) => {
         setBlocks(b);
         setTypes(t);
-        setLoading(false);
       })
-      .catch(() => navigate(`/admin/tours/${tourId}/stops`));
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Error cargando contenido de la parada';
+        setError(message);
+      })
+      .finally(() => setLoading(false));
   }, [stopId, tourId, navigate]);
 
   const reload = async () => {
@@ -70,6 +74,22 @@ export function AdminStopContentScreen() {
       <div className="p-8 flex items-center gap-2 text-[#6E6E6E]">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#E6FF00] border-t-transparent" />
         Cargando...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 space-y-4">
+        <div className="rounded-2xl border border-[#FF4D67] bg-[#2A121B] p-4 text-sm text-[#FFB1C1]">
+          {error}
+        </div>
+        <button
+          onClick={() => navigate(`/admin/tours/${tourId}/stops`)}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#E6FF00] px-4 py-2 text-sm font-medium text-[#111111] hover:bg-[#D6F500] transition-colors"
+        >
+          Volver a paradas
+        </button>
       </div>
     );
   }

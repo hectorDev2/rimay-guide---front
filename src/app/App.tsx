@@ -27,6 +27,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
 import { toDisplayStops } from '@/lib/tour/types';
+import { getHardcodedTour } from '@/lib/tour/data';
 import { fetchTourBySlug } from '@/services/tourService';
 import { RequireAdmin } from './admin/RequireAdmin';
 import { AdminLayout } from './admin/AdminLayout';
@@ -212,7 +213,13 @@ function PlayerRoute() {
 
   useGeolocation({
     enabled: geoEnabled,
-    stops: t.stops,
+    stops: t.stops.map(({ id, name, latitude, longitude, status }) => ({
+      id,
+      name,
+      latitude,
+      longitude,
+      status,
+    })),
     onEnterStop: (detectedStopId) => {
       if (detectedStopId !== currentStop.id) {
         t.handleSelectStop(detectedStopId);
@@ -246,7 +253,7 @@ function PlayerRoute() {
         onNext={t.handleNext}
         onPrev={t.handlePrev}
         nextStopName={t.getNextStopName(currentStop.id)}
-        onBack={() => navigate('/')}
+        onBack={() => navigate('/tour')}
         onShowDetails={() => setShowStopDetail(true)}
       />
 
@@ -311,7 +318,7 @@ function LoginRoute() {
   const [showConfirmEmail, setShowConfirmEmail] = useState(false);
   const [signUpEmail, setSignUpEmail] = useState('');
 
-  const redirect = searchParams.get('redirect') ?? '/';
+  const redirect = searchParams.get('redirect') ?? '/tour';
 
   if (isAuthenticated) {
     return <Navigate to={redirect} replace />;
@@ -366,7 +373,6 @@ function LoginRoute() {
 function LogoutButton() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   if (!isAuthenticated) return null;
@@ -391,12 +397,7 @@ function LogoutButton() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                await logout();
-                navigate('/login', { replace: true });
-              }}
-            >
+            <AlertDialogAction onClick={() => logout()}>
               Cerrar sesión
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -408,34 +409,69 @@ function LogoutButton() {
 
 export default function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const initializeAuth = useAuthStore((s) => s.initialize);
   const isAuthLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setTour = useTourStore((s) => s.setTour);
   const tour = useTourStore((s) => s.tour);
   const [isTourLoading, setIsTourLoading] = useState(!tour);
   const [tourError, setTourError] = useState<string | null>(null);
   const isLandingPage = location.pathname === '/';
   const isAdminPage = location.pathname.startsWith('/admin');
+  const wasAuthenticated = useRef(isAuthenticated);
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
   useEffect(() => {
+    if (wasAuthenticated.current && !isAuthenticated && !isAdminPage) {
+      navigate('/login', { replace: true });
+    }
+    wasAuthenticated.current = isAuthenticated;
+  }, [isAuthenticated, isAdminPage, navigate]);
+
+  useEffect(() => {
     if (isAdminPage) return;
     if (tour) return;
-    fetchTourBySlug('sacsayhuaman')
+
+    const TIMEOUT_MS = 3000;
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout cargando tour')), TIMEOUT_MS)
+    );
+
+    Promise.race([fetchTourBySlug('sacsayhuaman'), timeout])
       .then(setTour)
-      .catch((err) => setTourError(err.message))
+      .catch((err) => {
+        if (err.message === 'Timeout cargando tour') {
+          const fallback = getHardcodedTour('sacsayhuaman');
+          if (fallback) {
+            setTour(fallback);
+            return;
+          }
+        }
+        setTourError(err.message);
+      })
       .finally(() => setIsTourLoading(false));
   }, [tour, setTour, isAdminPage]);
 
   const retry = useCallback(() => {
     setIsTourLoading(true);
     setTourError(null);
-    fetchTourBySlug('sacsayhuaman')
+    const TIMEOUT_MS = 5000;
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout cargando tour')), TIMEOUT_MS)
+    );
+    Promise.race([fetchTourBySlug('sacsayhuaman'), timeout])
       .then(setTour)
-      .catch((err) => setTourError(err.message))
+      .catch((err) => {
+        if (err.message === 'Timeout cargando tour') {
+          const fallback = getHardcodedTour('sacsayhuaman');
+          if (fallback) { setTour(fallback); return; }
+        }
+        setTourError(err.message);
+      })
       .finally(() => setIsTourLoading(false));
   }, [setTour]);
 
@@ -447,6 +483,7 @@ export default function App() {
             <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
               <Route index element={<AdminDashboardScreen />} />
               <Route path="tours" element={<AdminToursScreen />} />
+              <Route path="tours/new" element={<AdminTourEditScreen />} />
               <Route path="tours/:tourId" element={<AdminTourEditScreen />} />
               <Route path="tours/:tourId/stops" element={<AdminStopsScreen />} />
               <Route path="tours/:tourId/stops/:stopId/preview" element={<AdminStopPreviewScreen />} />
@@ -502,7 +539,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="size-full relative dark">
-        <div className={isLandingPage ? "size-full bg-background" : "h-full w-full max-w-md mx-auto relative bg-background text-foreground overflow-hidden"}>
+        <div className={isLandingPage ? "size-full bg-background" : "h-full w-full max-w-md mx-auto relative bg-background text-foreground overflow-y-auto"}>
           {!isLandingPage && <OfflineToast />}
           {!isLandingPage && <LogoutButton />}
           <AnimatePresence mode="wait">

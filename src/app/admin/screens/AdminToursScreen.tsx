@@ -38,8 +38,13 @@ export function AdminToursScreen() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-white">Tours</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Tours</h1>
+          <p className="text-sm text-[#A0A0A0] mt-2 max-w-2xl">
+            Administrá tus tours desde aquí. Seleccioná un tour y usá la sección de paradas para agregar coordenadas, audio y radios de activación.
+          </p>
+        </div>
         <button
           onClick={() => navigate('/admin/tours/new')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#E6FF00] text-[#111111] font-medium text-sm hover:bg-[#D6F500] transition-colors"

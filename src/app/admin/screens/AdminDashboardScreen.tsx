@@ -9,22 +9,19 @@ export function AdminDashboardScreen() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ tours: 0, stops: 0, translations: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [tours, translations] = await Promise.all([
+        const [tours, translations, stops] = await Promise.all([
           adminTourService.list(),
           adminTranslationService.list(),
+          adminStopService.listAll(),
         ]);
-        let totalStops = 0;
-        for (const tour of tours) {
-          const stops = await adminStopService.listByTour(tour.id);
-          totalStops += stops.length;
-        }
-        setStats({ tours: tours.length, stops: totalStops, translations: translations.length });
-      } catch {
-        // ignore
+        setStats({ tours: tours.length, stops: stops.length, translations: translations.length });
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Error cargando datos del dashboard');
       } finally {
         setLoading(false);
       }
@@ -48,22 +45,29 @@ export function AdminDashboardScreen() {
           Cargando...
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-6">
-          {cards.map((card) => (
-            <button
-              key={card.label}
-              onClick={() => navigate(card.to)}
-              className="bg-[#171717] border border-[#2C2C2C] rounded-2xl p-6 text-left hover:border-[#E6FF00] transition-colors group"
-            >
-              <card.icon className="w-8 h-8 text-[#E6FF00] mb-4" />
-              <p className="text-3xl font-bold text-white mb-1">{card.value}</p>
-              <p className="text-sm text-[#6E6E6E] flex items-center gap-1">
-                {card.label}
-                <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </p>
-            </button>
-          ))}
-        </div>
+        <>
+          {error && (
+            <div className="mb-6 rounded-2xl border border-[#FF4D67] bg-[#2A121B] p-4 text-sm text-[#FFB1C1]">
+              {error}
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-6">
+            {cards.map((card) => (
+              <button
+                key={card.label}
+                onClick={() => navigate(card.to)}
+                className="bg-[#171717] border border-[#2C2C2C] rounded-2xl p-6 text-left hover:border-[#E6FF00] transition-colors group"
+              >
+                <card.icon className="w-8 h-8 text-[#E6FF00] mb-4" />
+                <p className="text-3xl font-bold text-white mb-1">{card.value}</p>
+                <p className="text-sm text-[#6E6E6E] flex items-center gap-1">
+                  {card.label}
+                  <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
+  isProfileLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -25,39 +26,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isAdmin: false,
   isLoading: true,
+  isProfileLoading: false,
   error: null,
 
   loadProfile: async () => {
     const user = get().user;
     if (!user) {
-      set({ profile: null, isAdmin: false });
+      set({ profile: null, isAdmin: false, isProfileLoading: false });
       return;
     }
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
-    if (error || !data) {
+
+    console.log('authStore.loadProfile start for user:', user.id);
+    set({ isProfileLoading: true });
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('authStore.loadProfile error:', {
+          userId: user.id,
+          error,
+        });
+        set({ profile: null, isAdmin: false });
+        return;
+      }
+
+      if (!data) {
+        console.warn('authStore.loadProfile: no profile row found for user', user.id);
+        set({ profile: null, isAdmin: false });
+        return;
+      }
+
+      console.log('authStore.loadProfile success:', data);
+      set({ profile: data as ProfileRow, isAdmin: data.role === 'admin' });
+    } catch (error) {
+      console.error('authStore.loadProfile exception:', error);
       set({ profile: null, isAdmin: false });
-      return;
+    } finally {
+      set({ isProfileLoading: false });
     }
-    set({ profile: data as ProfileRow, isAdmin: data.role === 'admin' });
   },
 
   initialize: () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      set({
-        user: session?.user ?? null,
-        isAuthenticated: !!session,
-        isLoading: false,
-      });
-      if (session?.user) {
-        await get().loadProfile();
-      }
-    });
-
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('authStore.initialize session:', session);
       set({
         user: session?.user ?? null,
         isAuthenticated: !!session,
@@ -66,17 +82,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (session?.user) {
         await get().loadProfile();
       } else {
-        set({ profile: null, isAdmin: false });
+        set({ profile: null, isAdmin: false, isProfileLoading: false });
+      }
+    });
+
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('authStore.onAuthStateChange event:', _event, 'session:', session);
+      set({
+        user: session?.user ?? null,
+        isAuthenticated: !!session,
+        isLoading: false,
+      });
+      if (session?.user) {
+        await get().loadProfile();
+      } else {
+        set({ profile: null, isAdmin: false, isProfileLoading: false });
       }
     });
   },
 
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       set({ error: error.message, isLoading: false });
       throw error;
+    }
+
+    set({
+      user: data.session?.user ?? null,
+      isAuthenticated: !!data.session,
+      isLoading: false,
+    });
+
+    if (data.session?.user) {
+      await get().loadProfile();
     }
   },
 
@@ -109,8 +149,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
-    set({ user: null, profile: null, isAuthenticated: false, isAdmin: false });
+    set({ user: null, profile: null, isAuthenticated: false, isAdmin: false, isProfileLoading: false });
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // signOut falló pero ya limpiamos local
+    }
   },
 
   clearError: () => set({ error: null }),

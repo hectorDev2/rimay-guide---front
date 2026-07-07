@@ -29,6 +29,15 @@ export const adminStopService = {
     return (data as TourStopRow[]).map(toStop);
   },
 
+  listAll: async (): Promise<TourStop[]> => {
+    const { data, error } = await supabase
+      .from('tour_stops')
+      .select('*')
+      .order('order', { ascending: true });
+    if (error) throw error;
+    return (data as TourStopRow[]).map(toStop);
+  },
+
   create: async (tourId: string, input: StopInput): Promise<TourStop> => {
     const { data, error } = await supabase
       .from('tour_stops')

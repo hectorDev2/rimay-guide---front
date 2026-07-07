@@ -181,17 +181,21 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const waveformHeights = useRef<number[]>(WAVEFORM_HEIGHTS);
+  const fabItemVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1 },
+  };
 
   return (
     <div className="h-full relative overflow-hidden bg-[#0E0E0E]">
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-40"
+        className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none"
         style={{
           backgroundImage: 'url(https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=800&q=50)',
         }}
       />
 
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0E0E0E]/60 via-[#0E0E0E]/85 to-[#0E0E0E]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0E0E0E]/60 via-[#0E0E0E]/85 to-[#0E0E0E] pointer-events-none" />
 
       <audio
         ref={audioRef}
@@ -213,8 +217,12 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
           <div className="flex items-center gap-3">
             {onBack && (
               <button
-                onClick={onBack}
-                className="w-12 h-12 rounded-full bg-[#1E1E1E] flex items-center justify-center hover:bg-[#2C2C2C] transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBack?.();
+                }}
+                className="w-12 h-12 rounded-full bg-[#1E1E1E] flex items-center justify-center hover:bg-[#2C2C2C] transition-colors relative z-10"
                 aria-label={t('player.back')}
               >
                 <ArrowLeft className="w-5 h-5 text-white" />
@@ -222,8 +230,12 @@ export function AudioPlayer({ stop, onShowStopsList, onNext, onPrev, nextStopNam
             )}
             {onShowDetails && (
               <button
-                onClick={onShowDetails}
-                className="w-12 h-12 rounded-full bg-[#1E1E1E] flex items-center justify-center hover:bg-[#2C2C2C] transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowDetails?.();
+                }}
+                className="w-12 h-12 rounded-full bg-[#1E1E1E] flex items-center justify-center hover:bg-[#2C2C2C] transition-colors relative z-10"
                 aria-label="Ver detalle del lugar"
                 title="Detalle del lugar"
               >

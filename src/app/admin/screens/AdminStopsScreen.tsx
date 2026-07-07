@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Eye, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Eye, LayoutGrid, MapPin } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { adminStopService } from '@/services/admin/adminStopService';
@@ -14,19 +14,26 @@ export function AdminStopsScreen() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [stops, setStops] = useState<TourStop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingStop, setEditingStop] = useState<TourStop | null>(null);
+  const [initialStopValues, setInitialStopValues] = useState<Partial<StopInput> | undefined>(undefined);
 
   useEffect(() => {
     if (!tourId) return;
     Promise.all([
       adminTourService.get(tourId),
       adminStopService.listByTour(tourId),
-    ]).then(([t, s]) => {
-      setTour(t);
-      setStops(s);
-      setLoading(false);
-    }).catch(() => navigate('/admin/tours'));
+    ])
+      .then(([t, s]) => {
+        setTour(t);
+        setStops(s);
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Error cargando datos de paradas';
+        setError(message);
+      })
+      .finally(() => setLoading(false));
   }, [tourId, navigate]);
 
   const handleDelete = async (id: string, name: string) => {
@@ -61,6 +68,22 @@ export function AdminStopsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="p-8 space-y-4">
+        <div className="rounded-2xl border border-[#FF4D67] bg-[#2A121B] p-4 text-sm text-[#FFB1C1]">
+          {error}
+        </div>
+        <button
+          onClick={() => navigate('/admin/tours')}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#E6FF00] px-4 py-2 text-sm font-medium text-[#111111] hover:bg-[#D6F500] transition-colors"
+        >
+          Volver a tours
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <button
@@ -71,18 +94,41 @@ export function AdminStopsScreen() {
         Volver a tours
       </button>
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Paradas</h1>
           <p className="text-sm text-[#6E6E6E] mt-1">{tour?.name}</p>
         </div>
-        <button
-          onClick={() => { setEditingStop(null); setShowForm(true); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#E6FF00] text-[#111111] font-medium text-sm hover:bg-[#D6F500] transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva parada
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={() => { setEditingStop(null); setInitialStopValues(undefined); setShowForm(true); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#E6FF00] text-[#111111] font-medium text-sm hover:bg-[#D6F500] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva parada
+          </button>
+          <button
+            onClick={() => {
+              setEditingStop(null);
+              setInitialStopValues({
+                order: stops.length + 1,
+                name: 'Parada de prueba',
+                description: 'Parada de prueba para verificar geolocalización y audio en la app.',
+                culturalContext: 'Contenido de prueba para validar el flujo de la parada.',
+                latitude: -13.5078,
+                longitude: -71.9815,
+                radiusMeters: 25,
+                audioSrc: '/voices/sacsayhuaman_es.mp3',
+                durationSeconds: 120,
+              });
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111111] text-white border border-[#2C2C2C] font-medium text-sm hover:bg-[#1E1E1E] transition-colors"
+          >
+            <MapPin className="w-4 h-4" />
+            Parada de prueba
+          </button>
+        </div>
       </div>
 
       {stops.length === 0 ? (
@@ -167,7 +213,11 @@ export function AdminStopsScreen() {
           tourId={tourId!}
           stop={editingStop}
           nextOrder={stops.length + 1}
-          onClose={() => setShowForm(false)}
+          initialValues={initialStopValues}
+          onClose={() => {
+            setShowForm(false);
+            setInitialStopValues(undefined);
+          }}
           onSaved={(saved) => {
             if (editingStop) {
               setStops((prev) => prev.map((s) => (s.id === saved.id ? saved : s)));
@@ -175,6 +225,7 @@ export function AdminStopsScreen() {
               setStops((prev) => [...prev, saved]);
             }
             setShowForm(false);
+            setInitialStopValues(undefined);
           }}
         />
       )}
@@ -182,10 +233,11 @@ export function AdminStopsScreen() {
   );
 }
 
-function StopFormModal({ tourId, stop, nextOrder, onClose, onSaved }: {
+function StopFormModal({ tourId, stop, nextOrder, initialValues, onClose, onSaved }: {
   tourId: string;
   stop: TourStop | null;
   nextOrder: number;
+  initialValues?: Partial<StopInput>;
   onClose: () => void;
   onSaved: (stop: TourStop) => void;
 }) {
@@ -212,6 +264,7 @@ function StopFormModal({ tourId, stop, nextOrder, onClose, onSaved }: {
       radiusMeters: 15,
       audioSrc: '/voices/sacsayhuaman_es.mp3',
       durationSeconds: 180,
+      ...initialValues,
     },
   });
 
