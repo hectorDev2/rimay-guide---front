@@ -1,5 +1,6 @@
-import { motion } from 'motion/react';
-import { Map, ArrowLeft, Share2 } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Map, ArrowLeft, Share2, Link2, Check } from 'lucide-react';
 
 interface TourCompleteScreenProps {
   tourName: string;
@@ -16,6 +17,41 @@ export function TourCompleteScreen({
   onExploreMap,
   onGoHome,
 }: TourCompleteScreenProps) {
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const shareText = `🏔️ ¡Completé el tour "${tourName}" con Rimay Guide! ${totalStops} paradas y ${totalMinutes} minutos de historia inca.`;
+  const shareUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Rimay Guide', text: shareText, url: shareUrl });
+        return;
+      } catch {
+        // usuario canceló o no soportado: caemos al menú manual
+      }
+    }
+    setShowShareMenu((v) => !v);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard no disponible
+    }
+  };
+
+  const encoded = encodeURIComponent(`${shareText} ${shareUrl}`);
+  const shareLinks = [
+    { name: 'WhatsApp', href: `https://wa.me/?text=${encoded}`, color: '#25D366' },
+    { name: 'X', href: `https://twitter.com/intent/tweet?text=${encoded}`, color: '#FFFFFF' },
+    { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, color: '#1877F2' },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -61,6 +97,47 @@ export function TourCompleteScreen({
         </p>
 
         <div className="w-full space-y-3 max-w-sm">
+          <button
+            onClick={handleShare}
+            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all"
+          >
+            <Share2 className="w-5 h-5" />
+            Compartir mi logro
+          </button>
+
+          <AnimatePresence>
+            {showShareMenu && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="flex items-center justify-center gap-2 py-1">
+                  {shareLinks.map((link) => (
+                    <a
+                      key={link.name}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 h-11 rounded-full bg-[#1E1E1E] border border-[#2C2C2C] flex items-center justify-center text-[13px] font-medium hover:bg-[#2C2C2C] transition-all active:scale-95"
+                      style={{ color: link.color }}
+                    >
+                      {link.name}
+                    </a>
+                  ))}
+                  <button
+                    onClick={handleCopy}
+                    aria-label="Copiar enlace"
+                    className="w-11 h-11 rounded-full bg-[#1E1E1E] border border-[#2C2C2C] flex items-center justify-center text-white hover:bg-[#2C2C2C] transition-all active:scale-95"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-[#AFFF00]" /> : <Link2 className="w-4 h-4" />}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <button
             onClick={onExploreMap}
             className="w-full h-14 rounded-full bg-[#D4A843] text-[#111111] font-semibold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(212,168,67,0.3)] active:scale-[0.96] transition-all"
