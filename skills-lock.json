@@ -7,6 +7,12 @@
       "skillPath": "plugins/patterns/atomic-design/skills/atomic-design-fundamentals/SKILL.md",
       "computedHash": "4a2d3a077911fd8da7ac42c42ff120345e476078ede8f523c9a0a7b4e3eb7cc8"
     },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion-best-practices/SKILL.md",
+      "computedHash": "3c92fd961e11ea0be692138a9ba7cccaea4ec509d2e462d7e170a5b1238ab112"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
