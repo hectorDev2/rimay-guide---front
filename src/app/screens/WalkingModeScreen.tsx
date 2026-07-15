@@ -16,7 +16,10 @@ import {
   X,
 } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useLocationPriming } from '@/hooks/useLocationPriming';
 import { useNavigation } from '@/hooks/useNavigation';
+import { LocationPrimer } from '@/app/components/organisms/LocationPrimer';
+import { WalkingModeIntro } from '@/app/components/organisms/WalkingModeIntro';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useLocationStore } from '@/stores/locationStore';
 import { useTourStore } from '@/stores/tourStore';
@@ -33,13 +36,16 @@ const CAPSULE_TONE_STYLES = {
 } as const;
 
 const MAP_AUTO_HIDE_DELAY_MS = 4000;
+const WALK_INTRO_SEEN_KEY = 'rimay_walk_intro_seen';
 
 export function WalkingModeScreen() {
   const navigate = useNavigate();
+  const { primed, markPrimed } = useLocationPriming();
+  const [introSeen, setIntroSeen] = useState(() => localStorage.getItem(WALK_INTRO_SEEN_KEY) === '1');
 
-  useGeolocation({ enabled: true });
+  useGeolocation({ enabled: primed });
 
-  const { targetStop, allCompleted } = useNavigation({ enabled: true });
+  const { targetStop, allCompleted } = useNavigation({ enabled: primed });
 
   const position = useLocationStore((s) => s.position);
   const setPosition = useLocationStore((s) => s.setPosition);
@@ -63,7 +69,9 @@ export function WalkingModeScreen() {
   const [arrivedStop, setArrivedStop] = useState<TourStop | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [selectedStop, setSelectedStop] = useState<TourStop | null>(null);
   const mapAutoOpenedRef = useRef(false);
+  const allStops = useTourStore((s) => s.tour?.stops ?? []);
 
   // Tour completo → PlayerRoute muestra la pantalla de cierre
   useEffect(() => {
@@ -136,6 +144,21 @@ export function WalkingModeScreen() {
       : gpsWeak
         ? 'Señal GPS imprecisa — sigue el camino'
         : null);
+
+  if (!introSeen) {
+    return (
+      <WalkingModeIntro
+        onContinue={() => {
+          localStorage.setItem(WALK_INTRO_SEEN_KEY, '1');
+          setIntroSeen(true);
+        }}
+      />
+    );
+  }
+
+  if (!primed) {
+    return <LocationPrimer onContinue={markPrimed} />;
+  }
 
   return (
     <div className="h-full relative overflow-hidden bg-[#0E0E0E]">
@@ -350,10 +373,16 @@ export function WalkingModeScreen() {
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-30 bg-[#111111]"
           >
-            <WalkingMap className="absolute inset-0 w-full h-full" />
+            <WalkingMap
+              className="absolute inset-0 w-full h-full"
+              onStopClick={(stopId) => {
+                const stop = allStops.find((s) => s.id === stopId);
+                if (stop) setSelectedStop(stop);
+              }}
+            />
             <button
               onClick={() => setShowMap(false)}
-              className="absolute top-4 right-4 z-10 w-11 h-11 rounded-full bg-[#171717]/90 backdrop-blur-[12px] border border-[#2C2C2C] flex items-center justify-center text-white active:scale-90 transition-all"
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-[#171717]/90 backdrop-blur-[12px] border border-[#2C2C2C] flex items-center justify-center text-white active:scale-90 transition-all"
               aria-label="Cerrar mapa"
             >
               <X className="w-5 h-5" />
@@ -382,6 +411,17 @@ export function WalkingModeScreen() {
             stopId={targetStop.id}
             stopName={targetStop.name}
             onClose={() => setShowDetail(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedStop && (
+          <StopDetailSheet
+            stopId={selectedStop.id}
+            stopName={selectedStop.name}
+            onClose={() => setSelectedStop(null)}
+            hideAudio={selectedStop.id === arrivedStop?.id}
           />
         )}
       </AnimatePresence>

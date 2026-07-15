@@ -8,17 +8,24 @@ interface StopDetailSheetProps {
   stopId: string;
   stopName: string;
   onClose: () => void;
+  /** Oculta el bloque de audio porque ya hay un reproductor de fondo para esta parada. */
+  hideAudio?: boolean;
 }
 
 /**
  * Detalle de una parada, construido 100% desde sus bloques de contenido.
- * Se excluye 'audio' porque el player ya lo está reproduciendo.
+ * hideAudio excluye 'audio' cuando el player ya lo está reproduciendo en
+ * segundo plano; si no, se muestra (ej. al abrir una parada desde el mapa
+ * que no es la que está sonando).
  * Si el lugar tiene bloque model3d aparece "Explorar en 3D"; si no, la
  * experiencia se siente completa sin él.
  */
-export function StopDetailSheet({ stopId, stopName, onClose }: StopDetailSheetProps) {
+export function StopDetailSheet({ stopId, stopName, onClose, hideAudio = true }: StopDetailSheetProps) {
   const { blocks, loading } = useStopContents(stopId);
-  const visibleBlocks = useMemo(() => blocks.filter((b) => b.type !== 'audio'), [blocks]);
+  const visibleBlocks = useMemo(
+    () => (hideAudio ? blocks.filter((b) => b.type !== 'audio') : blocks),
+    [blocks, hideAudio],
+  );
 
   return (
     <motion.div

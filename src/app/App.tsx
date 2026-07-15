@@ -24,6 +24,7 @@ import { SplashScreenSkeleton, AudioPlayerSkeleton } from './components/atoms/Sk
 import { MiniPlayer } from './components/organisms/MiniPlayer';
 import { TourCompleteScreen } from './components/organisms/TourCompleteScreen';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useLocationPriming } from '@/hooks/useLocationPriming';
 import { useAuthStore } from '@/stores/authStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -51,6 +52,11 @@ import {
   AlertDialogTitle,
 } from './components/ui/alert-dialog';
 
+const HAS_SEEN_SPLASH_KEY = 'rimay_has_seen_splash';
+// Espaciado entre el modal de descarga y el de "agregar a inicio": mostrarlos
+// pegados se siente como dos interrupciones apiladas en la primera sesión.
+const ADD_TO_HOME_DELAY_MS = 2500;
+
 function useTourStops() {
   const navigate = useNavigate();
   const tour = useTourStore((s) => s.tour)!;
@@ -64,11 +70,18 @@ function useTourStops() {
   const setDownloaded = useTourStore((s) => s.setDownloaded);
 
   useEffect(() => {
-    if (!isDownloaded && !downloadPrompted) {
-      setDownloadPrompted(true);
-      const timer = setTimeout(() => setShowDownloadModal(true), 800);
-      return () => clearTimeout(timer);
-    }
+    if (isDownloaded || downloadPrompted) return;
+    setDownloadPrompted(true);
+
+    // En la primerísima visita dejamos que explore el splash sin
+    // interrupciones; recién en la próxima vez que vuelva a esta pantalla
+    // (misma sesión o una nueva) se le ofrece descargar el tour offline.
+    const isFirstEverVisit = !localStorage.getItem(HAS_SEEN_SPLASH_KEY);
+    localStorage.setItem(HAS_SEEN_SPLASH_KEY, '1');
+    if (isFirstEverVisit) return;
+
+    const timer = setTimeout(() => setShowDownloadModal(true), 2500);
+    return () => clearTimeout(timer);
   }, [isDownloaded, downloadPrompted]);
 
   const stops = useMemo(
@@ -114,7 +127,7 @@ function useTourStops() {
 
   const handleDownloadComplete = () => {
     setDownloaded(true);
-    setTimeout(() => setShowAddToHome(true), 500);
+    setTimeout(() => setShowAddToHome(true), ADD_TO_HOME_DELAY_MS);
   };
 
   return {
@@ -220,6 +233,10 @@ function PlayerRoute() {
   const [showStopDetail, setShowStopDetail] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [showTourComplete, setShowTourComplete] = useState(false);
+  // El auto-avance por proximidad es una comodidad pasiva: si el usuario
+  // nunca pasó por /walk o "Ver ubicación", no le disparamos el permiso de
+  // GPS en frío solo por haber abierto el reproductor de audio.
+  const { primed: geoPrimed } = useLocationPriming();
 
   const totalStops = t.stops.length;
   const allCompleted = totalStops > 0 && completedIds.length >= totalStops;
@@ -250,7 +267,7 @@ function PlayerRoute() {
   }, []);
 
   useGeolocation({
-    enabled: geoEnabled,
+    enabled: geoEnabled && geoPrimed,
     stops: t.stops.map(({ id, name, latitude, longitude, status }) => ({
       id,
       name,
@@ -354,17 +371,29 @@ function ChatWrapper({ showButton = true }: { showButton?: boolean }) {
   );
 }
 
+const RESEND_COOLDOWN_S = 30;
+
 function LoginRoute() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const signUp = useAuthStore((s) => s.signUp);
+  const resendConfirmation = useAuthStore((s) => s.resendConfirmation);
   const clearError = useAuthStore((s) => s.clearError);
+  const error = useAuthStore((s) => s.error);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [showConfirmEmail, setShowConfirmEmail] = useState(false);
   const [signUpEmail, setSignUpEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendSent, setResendSent] = useState(false);
 
   const redirect = searchParams.get('redirect') ?? '/tour';
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   if (isAuthenticated) {
     return <Navigate to={redirect} replace />;
@@ -384,13 +413,53 @@ function LoginRoute() {
             Te enviamos un link de confirmación a
           </p>
           <p className="text-white font-medium text-[15px] mb-6">{signUpEmail}</p>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-[16px] bg-[#FF4D67]/10 border border-[#FF4D67]/20 text-[#FF4D67] text-[13px] text-center">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={async () => {
+              clearError();
+              setResendSent(false);
+              try {
+                await resendConfirmation(signUpEmail, redirect);
+                setResendSent(true);
+                setResendCooldown(RESEND_COOLDOWN_S);
+              } catch {
+                // el error ya se muestra arriba desde el store
+              }
+            }}
+            disabled={resendCooldown > 0}
+            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] active:scale-[0.96] transition-all disabled:opacity-50"
+          >
+            {resendCooldown > 0
+              ? `Reenviar en ${resendCooldown}s`
+              : resendSent
+                ? 'Reenviado ✓ — probá de nuevo'
+                : 'Reenviar email de confirmación'}
+          </button>
+
+          <button
+            onClick={() => {
+              setShowConfirmEmail(false);
+              setIsSignUpMode(true);
+              clearError();
+            }}
+            className="w-full h-12 mt-3 rounded-full bg-transparent border border-[#2C2C2C] text-white/80 font-medium text-[14px] hover:bg-[#1E1E1E] transition-all"
+          >
+            Editar email
+          </button>
+
           <button
             onClick={() => {
               setShowConfirmEmail(false);
               setIsSignUpMode(false);
               clearError();
             }}
-            className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] active:scale-[0.96] transition-all"
+            className="w-full h-10 mt-2 text-[#6E6E6E] text-[13px] hover:text-white transition-colors"
           >
             Volver a iniciar sesión
           </button>
@@ -403,7 +472,7 @@ function LoginRoute() {
     <LoginScreen
       onLogin={() => navigate(redirect, { replace: true })}
       onSignUp={async (email: string, password: string) => {
-        await signUp(email, password);
+        await signUp(email, password, redirect);
         setSignUpEmail(email);
         setShowConfirmEmail(true);
       }}
@@ -412,6 +481,8 @@ function LoginRoute() {
         setIsSignUpMode(!isSignUpMode);
         clearError();
       }}
+      redirectPath={redirect}
+      initialEmail={signUpEmail}
     />
   );
 }
@@ -427,7 +498,7 @@ function LogoutButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="absolute top-[42px] right-[92px] z-40 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        className="absolute top-4 right-[68px] z-40 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         aria-label="Cerrar sesión"
       >
         <LogOut className="w-5 h-5" />

@@ -3,6 +3,13 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import type { ProfileRow } from '@/lib/supabase/types';
 
+// Vuelve a /login con el destino original: si la confirmación/OAuth ya deja
+// sesión activa al llegar, LoginRoute detecta isAuthenticated y navega solo
+// hacia `redirect` en vez de dejar al usuario varado en el landing.
+function buildEmailRedirect(redirectPath: string): string {
+  return `${window.location.origin}/login?redirect=${encodeURIComponent(redirectPath)}`;
+}
+
 interface AuthState {
   user: User | null;
   profile: ProfileRow | null;
@@ -12,8 +19,9 @@ interface AuthState {
   isProfileLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  socialLogin: (provider: 'google' | 'apple') => Promise<void>;
+  signUp: (email: string, password: string, redirectPath?: string) => Promise<void>;
+  resendConfirmation: (email: string, redirectPath?: string) => Promise<void>;
+  socialLogin: (provider: 'google' | 'apple', redirectPath?: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   initialize: () => void;
@@ -126,12 +134,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signUp: async (email: string, password: string) => {
+  signUp: async (email: string, password: string, redirectPath = '/tour') => {
     set({ isLoading: true, error: null });
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
+      options: { emailRedirectTo: buildEmailRedirect(redirectPath) },
     });
     if (error) {
       set({ error: error.message, isLoading: false });
@@ -140,12 +148,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: false });
   },
 
-  socialLogin: async (provider: 'google' | 'apple') => {
+  resendConfirmation: async (email: string, redirectPath = '/tour') => {
+    set({ isLoading: true, error: null });
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: buildEmailRedirect(redirectPath) },
+    });
+    if (error) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+    set({ isLoading: false });
+  },
+
+  socialLogin: async (provider: 'google' | 'apple', redirectPath = '/tour') => {
     set({ isLoading: true, error: null });
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: buildEmailRedirect(redirectPath),
       },
     });
     if (error) {

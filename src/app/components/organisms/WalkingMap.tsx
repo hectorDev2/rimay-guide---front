@@ -114,15 +114,18 @@ const MARKER_CSS = `
 
 interface WalkingMapProps {
   className?: string;
+  onStopClick?: (stopId: string) => void;
 }
 
-export function WalkingMap({ className = '' }: WalkingMapProps) {
+export function WalkingMap({ className = '', onStopClick }: WalkingMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const stopMarkersRef = useRef<maplibregl.Marker[]>([]);
   const loadedRef = useRef(false);
   const orbitDoneRef = useRef(false);
+  const onStopClickRef = useRef(onStopClick);
+  onStopClickRef.current = onStopClick;
   // Estado (no ref): el efecto que dibuja la ruta debe re-ejecutarse cuando
   // el mapa termina de cargar, o la ruta calculada antes del 'load' nunca se pinta.
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -270,6 +273,11 @@ export function WalkingMap({ className = '' }: WalkingMapProps) {
     stopMarkersRef.current.forEach((m) => m.remove());
     stopMarkersRef.current = tour.stops.map((s) => {
       const el = createStopMarkerEl(s.order, s.id === targetStopId, completedIds.includes(s.id));
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onStopClickRef.current?.(s.id);
+      });
       return new maplibregl.Marker({ element: el })
         .setLngLat([s.longitude, s.latitude])
         .addTo(map);
