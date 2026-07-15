@@ -12,6 +12,8 @@ import {
   RotateCw,
   MessageSquare,
   BookOpen,
+  PersonStanding,
+  Orbit,
 } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useLocationPriming } from '@/hooks/useLocationPriming';
@@ -23,7 +25,7 @@ import { useLocationStore } from '@/stores/locationStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useAudioEngine, formatTime } from '@/hooks/useAudioEngine';
-import { WalkingMap } from '@/app/components/organisms/WalkingMap';
+import { WalkingMap, type CameraView } from '@/app/components/organisms/WalkingMap';
 import { StopDetailSheet } from '@/app/components/organisms/StopDetailSheet';
 import type { TourStop } from '@/lib/tour/types';
 
@@ -63,6 +65,7 @@ export function WalkingModeScreen() {
   const openChat = useChatStore((s) => s.openChat);
 
   const [arrivedStop, setArrivedStop] = useState<TourStop | null>(null);
+  const [cameraView, setCameraView] = useState<CameraView>('third');
   const [showDetail, setShowDetail] = useState(false);
   const [selectedStop, setSelectedStop] = useState<TourStop | null>(null);
   const allStops = useTourStore((s) => s.tour?.stops ?? []);
@@ -166,6 +169,7 @@ export function WalkingModeScreen() {
           {/* Mapa en vivo de fondo: la posición se ve moverse mientras se camina */}
           <WalkingMap
             className="absolute inset-0 w-full h-full z-0"
+            view={cameraView}
             onStopClick={(stopId) => {
               const stop = allStops.find((s) => s.id === stopId);
               if (stop) setSelectedStop(stop);
@@ -207,9 +211,20 @@ export function WalkingModeScreen() {
                 arrivedStop ? '' : 'bg-[#111111]/70 backdrop-blur-md rounded-[24px] px-5 py-4 border border-white/10'
               }`}
             >
-              <span className="text-[#D4A843] text-[13px] font-semibold tracking-wide uppercase">
-                {arrivedStop ? 'Has llegado' : 'Próxima parada'}
-              </span>
+              {arrivedStop ? (
+                <motion.span
+                  initial={{ scale: 2.2, opacity: 0, rotate: -8 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 16 }}
+                  className="inline-block text-[#E6FF00] text-[13px] font-semibold tracking-wide uppercase"
+                >
+                  ✦ Parada desbloqueada
+                </motion.span>
+              ) : (
+                <span className="text-[#D4A843] text-[13px] font-semibold tracking-wide uppercase">
+                  Próxima parada
+                </span>
+              )}
               <h2 className="text-[32px] font-semibold text-white leading-tight mt-1">
                 {targetStop.name}
               </h2>
@@ -359,6 +374,24 @@ export function WalkingModeScreen() {
           </div>
         )}
       </div>
+
+      {/* Alternar primera persona / vista elevada */}
+      {!arrivedStop && (
+        <button
+          onClick={() => {
+            setCameraView((v) => (v === 'first' ? 'third' : 'first'));
+            setFollowCamera(true);
+          }}
+          className={`absolute bottom-40 right-4 z-10 w-12 h-12 rounded-full flex items-center justify-center border transition-colors active:scale-90 ${
+            cameraView === 'first'
+              ? 'bg-[#E6FF00] text-[#111111] border-transparent shadow-[0_8px_20px_rgba(230,255,0,0.35)]'
+              : 'bg-[#1E1E1E]/90 text-white border-white/10 backdrop-blur-[20px]'
+          }`}
+          aria-label={cameraView === 'first' ? 'Vista elevada' : 'Vista en primera persona'}
+        >
+          {cameraView === 'first' ? <Orbit className="w-5 h-5" /> : <PersonStanding className="w-6 h-6" />}
+        </button>
+      )}
 
       {/* Re-centrar cámara del mapa en vivo */}
       <AnimatePresence>
