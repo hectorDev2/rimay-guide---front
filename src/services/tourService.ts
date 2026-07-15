@@ -8,7 +8,24 @@ function firstOfType(blocks: ContentBlock[] | undefined, type: string): ContentB
   return blocks?.find((b) => b.type === type);
 }
 
+const FETCH_TIMEOUT_MS = 10000;
+
 export async function fetchTourBySlug(slug: string): Promise<Tour> {
+  // Red de seguridad: si Supabase no responde (offline, red lenta o lock
+  // colgado), caemos al tour hardcodeado en vez de dejar la app pegada.
+  return Promise.race([
+    fetchTourFromSupabase(slug),
+    new Promise<Tour>((resolve, reject) => {
+      setTimeout(() => {
+        const fallback = getHardcodedTour(slug);
+        if (fallback) resolve(fallback);
+        else reject(new Error(`Tiempo de espera agotado al cargar el tour: ${slug}`));
+      }, FETCH_TIMEOUT_MS);
+    }),
+  ]);
+}
+
+async function fetchTourFromSupabase(slug: string): Promise<Tour> {
   const { data: tour, error } = await supabase
     .from('tours')
     .select('*')
