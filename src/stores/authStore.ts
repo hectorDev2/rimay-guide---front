@@ -86,7 +86,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     });
 
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    // IMPORTANTE: el callback NO debe ser async ni hacer queries a Supabase
+    // directamente — supabase-js mantiene un lock de auth mientras emite este
+    // evento y cualquier query interno queda en deadlock (skeleton infinito
+    // al refrescar). Se difiere con setTimeout para salir del lock.
+    supabase.auth.onAuthStateChange((_event, session) => {
       console.log('authStore.onAuthStateChange event:', _event, 'session:', session);
       set({
         user: session?.user ?? null,
@@ -94,7 +98,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
       if (session?.user) {
-        await get().loadProfile();
+        setTimeout(() => {
+          get().loadProfile();
+        }, 0);
       } else {
         set({ profile: null, isAdmin: false, isProfileLoading: false });
       }
