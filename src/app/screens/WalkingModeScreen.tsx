@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -10,10 +10,8 @@ import {
   Pause,
   RotateCcw,
   RotateCw,
-  Map as MapIcon,
   MessageSquare,
   BookOpen,
-  X,
 } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useLocationPriming } from '@/hooks/useLocationPriming';
@@ -35,7 +33,6 @@ const CAPSULE_TONE_STYLES = {
   celebration: 'border-[#E6FF00]/40 text-[#E6FF00]',
 } as const;
 
-const MAP_AUTO_HIDE_DELAY_MS = 4000;
 const WALK_INTRO_SEEN_KEY = 'rimay_walk_intro_seen';
 
 export function WalkingModeScreen() {
@@ -55,7 +52,6 @@ export function WalkingModeScreen() {
   const distance = useNavigationStore((s) => s.distanceToStop);
   const eta = useNavigationStore((s) => s.etaMinutes);
   const gpsWeak = useNavigationStore((s) => s.gpsWeak);
-  const offRoute = useNavigationStore((s) => s.offRoute);
   const followCamera = useNavigationStore((s) => s.followCamera);
   const setFollowCamera = useNavigationStore((s) => s.setFollowCamera);
   const mode = useNavigationStore((s) => s.mode);
@@ -67,10 +63,8 @@ export function WalkingModeScreen() {
   const openChat = useChatStore((s) => s.openChat);
 
   const [arrivedStop, setArrivedStop] = useState<TourStop | null>(null);
-  const [showMap, setShowMap] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedStop, setSelectedStop] = useState<TourStop | null>(null);
-  const mapAutoOpenedRef = useRef(false);
   const allStops = useTourStore((s) => s.tour?.stops ?? []);
 
   // Tour completo → PlayerRoute muestra la pantalla de cierre
@@ -80,9 +74,12 @@ export function WalkingModeScreen() {
 
   // El hero solo reproduce cuando el usuario ya llegó a la parada; al
   // avanzar a la siguiente (mode vuelve a 'walking') se oculta de nuevo.
+  // La llegada también dispara el audio (vía activeStop) y abre el modal
+  // con toda la info de la parada.
   useEffect(() => {
     if (mode === 'arrived' && targetStop) {
       setArrivedStop(targetStop);
+      setShowDetail(true);
     } else if (mode === 'walking') {
       setArrivedStop(null);
     }
@@ -94,18 +91,6 @@ export function WalkingModeScreen() {
     const timer = setTimeout(dismissCapsule, 6000);
     return () => clearTimeout(timer);
   }, [capsule, dismissCapsule]);
-
-  // El mapa aparece solo si el usuario lo pide o si hay un desvío sostenido
-  useEffect(() => {
-    if (offRoute) {
-      mapAutoOpenedRef.current = true;
-      setShowMap(true);
-    } else if (mapAutoOpenedRef.current) {
-      mapAutoOpenedRef.current = false;
-      const timer = setTimeout(() => setShowMap(false), MAP_AUTO_HIDE_DELAY_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [offRoute]);
 
   const activeStop = arrivedStop ?? targetStop;
 
@@ -162,17 +147,33 @@ export function WalkingModeScreen() {
 
   return (
     <div className="h-full relative overflow-hidden bg-[#0E0E0E]">
-      {activeStop?.imageUrl && (
-        <motion.div
-          key={activeStop.imageUrl}
-          initial={{ opacity: 0, scale: 1.08 }}
-          animate={{ opacity: 0.35, scale: 1 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${activeStop.imageUrl})` }}
-        />
+      {arrivedStop ? (
+        <>
+          {activeStop?.imageUrl && (
+            <motion.div
+              key={activeStop.imageUrl}
+              initial={{ opacity: 0, scale: 1.08 }}
+              animate={{ opacity: 0.35, scale: 1 }}
+              transition={{ duration: 1.2, ease: 'easeOut' }}
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${activeStop.imageUrl})` }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0E0E0E]/60 via-[#0E0E0E]/85 to-[#0E0E0E]" />
+        </>
+      ) : (
+        <>
+          {/* Mapa en vivo de fondo: la posición se ve moverse mientras se camina */}
+          <WalkingMap
+            className="absolute inset-0 w-full h-full z-0"
+            onStopClick={(stopId) => {
+              const stop = allStops.find((s) => s.id === stopId);
+              if (stop) setSelectedStop(stop);
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0E0E0E]/75 via-transparent to-[#0E0E0E]/90 pointer-events-none" />
+        </>
       )}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0E0E0E]/60 via-[#0E0E0E]/85 to-[#0E0E0E]" />
 
       {arrivedStop && <audio ref={engine.audioRef} src={arrivedStop.audioSrc} onEnded={engine.handleEnded} />}
 
@@ -202,7 +203,9 @@ export function WalkingModeScreen() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="mb-8 text-center"
+              className={`mb-8 text-center ${
+                arrivedStop ? '' : 'bg-[#111111]/70 backdrop-blur-md rounded-[24px] px-5 py-4 border border-white/10'
+              }`}
             >
               <span className="text-[#D4A843] text-[13px] font-semibold tracking-wide uppercase">
                 {arrivedStop ? 'Has llegado' : 'Próxima parada'}
@@ -315,13 +318,6 @@ export function WalkingModeScreen() {
 
         {/* Chips bajo demanda */}
         <div className="flex items-center justify-center gap-3 mb-4">
-          <button
-            onClick={() => setShowMap(true)}
-            className="h-11 px-5 rounded-full bg-[#171717] border border-[#2C2C2C] flex items-center gap-2 text-white text-[13px] font-medium active:scale-95 transition-all"
-          >
-            <MapIcon className="w-4 h-4" />
-            Mapa
-          </button>
           {targetStop && (
             <button
               onClick={() => setShowDetail(true)}
@@ -364,44 +360,19 @@ export function WalkingModeScreen() {
         )}
       </div>
 
-      {/* Mapa bajo demanda */}
+      {/* Re-centrar cámara del mapa en vivo */}
       <AnimatePresence>
-        {showMap && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-30 bg-[#111111]"
+        {!arrivedStop && !followCamera && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            onClick={() => setFollowCamera(true)}
+            className="absolute bottom-24 right-4 z-10 w-12 h-12 rounded-full bg-[#E6FF00] text-[#111111] flex items-center justify-center shadow-[0_8px_20px_rgba(230,255,0,0.35)] active:scale-90 transition-transform"
+            aria-label="Re-centrar mapa"
           >
-            <WalkingMap
-              className="absolute inset-0 w-full h-full"
-              onStopClick={(stopId) => {
-                const stop = allStops.find((s) => s.id === stopId);
-                if (stop) setSelectedStop(stop);
-              }}
-            />
-            <button
-              onClick={() => setShowMap(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-[#171717]/90 backdrop-blur-[12px] border border-[#2C2C2C] flex items-center justify-center text-white active:scale-90 transition-all"
-              aria-label="Cerrar mapa"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <AnimatePresence>
-              {!followCamera && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={() => setFollowCamera(true)}
-                  className="absolute bottom-6 right-4 z-10 w-12 h-12 rounded-full bg-[#E6FF00] text-[#111111] flex items-center justify-center shadow-[0_8px_20px_rgba(230,255,0,0.35)] active:scale-90 transition-transform"
-                  aria-label="Re-centrar mapa"
-                >
-                  <Crosshair className="w-5 h-5" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </motion.div>
+            <Crosshair className="w-5 h-5" />
+          </motion.button>
         )}
       </AnimatePresence>
 
