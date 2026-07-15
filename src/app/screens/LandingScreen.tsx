@@ -540,15 +540,15 @@ export function LandingScreen() {
             </div>
             
             <div className="flex flex-wrap justify-center gap-10 lg:gap-16 font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
-              <a href="#" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.protocols')}</a>
-              <a href="#" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.intelligence')}</a>
-              <a href="#" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.coordinates')}</a>
-              <a href="#" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.terminal')}</a>
+              <a href="#systems" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.protocols')}</a>
+              <a href="#uplink" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.intelligence')}</a>
+              <a href="#archive" className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.coordinates')}</a>
+              <button type="button" onClick={() => navigate('/tour')} className="hover:text-primary transition-colors hover:translate-y-[-2px]">{t('landing.footer.terminal')}</button>
             </div>
 
             <div className="flex gap-8">
               {[Github, Twitter, MessageSquare].map((Icon, i) => (
-                <Icon key={i} className="w-5 h-5 text-white/20 hover:text-primary transition-colors cursor-pointer" />
+                <Icon key={i} className="w-5 h-5 text-white/20" />
               ))}
             </div>
           </div>
