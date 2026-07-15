@@ -40,9 +40,9 @@ export function MiniPlayer() {
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-[999] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-2"
+      className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-2 pointer-events-none"
     >
-      <div className="bg-[#171717] border border-[#2C2C2C] rounded-[22px] px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+      <div className="pointer-events-auto bg-[#171717] border border-[#2C2C2C] rounded-[22px] px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-3">
           <button
             onClick={togglePlay}

@@ -12,7 +12,14 @@ import { useStopContents } from '@/hooks/useStopContents';
 import { has3DExperience } from '@/lib/content/types';
 import type { TourStopDisplay } from './TourStopsList';
 
-const TourMap = lazy(() => import('./TourMap').then((m) => ({ default: m.TourMap })));
+// Con VITE_GOOGLE_MAPS_KEY se usa el mapa fotorrealista 3D (tiles de Google
+// Earth); sin key, fallback al mapa satelital de Mapbox.
+const HAS_GOOGLE_KEY = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
+const TourMap = lazy(() =>
+  HAS_GOOGLE_KEY
+    ? import('./TourMap3D').then((m) => ({ default: m.TourMap3D }))
+    : import('./TourMap').then((m) => ({ default: m.TourMap })),
+);
 
 const SIMULATED_POSITION = {
   lat: -13.52368220899334,

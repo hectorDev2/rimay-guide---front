@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams, useLo
 import { AnimatePresence } from 'motion/react';
 import { LogOut, AlertTriangle, RefreshCw } from 'lucide-react';
 import { SplashScreen } from './screens/SplashScreen';
+import { WalkingModeScreen } from './screens/WalkingModeScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
 import { LandingScreen } from './screens/LandingScreen';
@@ -75,7 +76,13 @@ function useTourStops() {
     [tour.stops, completedIds, currentStopId],
   );
 
-  const currentStop = stops.find((s) => s.status === 'current') ?? stops[0];
+  // Buscar primero por id: si la parada actual ya está completada, su status
+  // no es 'current' y el fallback anterior devolvía siempre la parada 1,
+  // dejando prev/next inoperativos.
+  const currentStop =
+    stops.find((s) => s.id === currentStopId) ??
+    stops.find((s) => s.status === 'current') ??
+    stops[0];
 
   const getNextStopName = useCallback((id: string): string | undefined => {
     const idx = stops.findIndex((s) => s.id === id);
@@ -83,19 +90,24 @@ function useTourStops() {
     return stops[idx + 1].name;
   }, [stops]);
 
+  const setCurrentStopIndex = useTourStore((s) => s.setCurrentStopIndex);
+
   const handleSelectStop = useCallback((id: string) => {
     setCurrentStopId(id);
+    const idx = tour.stops.findIndex((s) => s.id === id);
+    if (idx >= 0) setCurrentStopIndex(idx);
     navigate(`/player?stopId=${id}`);
-  }, [navigate]);
+  }, [navigate, tour.stops, setCurrentStopIndex]);
 
-  const handleNext = useCallback(() => {
-    const idx = stops.findIndex((s) => s.id === currentStop.id);
-    if (idx >= stops.length - 1) return;
+  // fromId permite navegar relativo a la parada visible (URL), no al estado interno
+  const handleNext = useCallback((fromId?: string) => {
+    const idx = stops.findIndex((s) => s.id === (fromId ?? currentStop.id));
+    if (idx === -1 || idx >= stops.length - 1) return;
     handleSelectStop(stops[idx + 1].id);
   }, [stops, currentStop, handleSelectStop]);
 
-  const handlePrev = useCallback(() => {
-    const idx = stops.findIndex((s) => s.id === currentStop.id);
+  const handlePrev = useCallback((fromId?: string) => {
+    const idx = stops.findIndex((s) => s.id === (fromId ?? currentStop.id));
     if (idx <= 0) return;
     handleSelectStop(stops[idx - 1].id);
   }, [stops, currentStop, handleSelectStop]);
@@ -108,6 +120,7 @@ function useTourStops() {
   return {
     stops,
     currentStop,
+    setCurrentStopId,
     showLocationModal,
     showDownloadModal,
     showAddToHome,
@@ -134,7 +147,18 @@ function TourRoute() {
   return <Navigate to="/tour" replace />;
 }
 
+function WalkRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login?redirect=/walk" replace />;
+  }
+
+  return <WalkingModeScreen />;
+}
+
 function SplashRoute() {
+  const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const t = useTourStops();
 
@@ -149,6 +173,7 @@ function SplashRoute() {
         stops={t.stops}
         currentStopId={t.currentStop.id}
         onSelectStop={t.handleSelectStop}
+        onStartRoute={() => navigate('/walk')}
         onShowLocation={() => t.setShowLocationModal(true)}
         onShowAddToHome={() => t.setShowAddToHome(true)}
       />
@@ -207,6 +232,19 @@ function PlayerRoute() {
     ? t.stops.find((s) => s.id === paramId) ?? t.currentStop
     : t.currentStop;
 
+  // Sincronizar el estado interno del hook (y el índice global para el chat)
+  // con la parada indicada en la URL.
+  const { setCurrentStopId } = t;
+  const setCurrentStopIndex = useTourStore((s) => s.setCurrentStopIndex);
+  useEffect(() => {
+    if (!paramId) return;
+    const idx = t.stops.findIndex((s) => s.id === paramId);
+    if (idx >= 0) {
+      setCurrentStopId(paramId);
+      setCurrentStopIndex(idx);
+    }
+  }, [paramId]);
+
   useEffect(() => {
     setGeoEnabled(true);
   }, []);
@@ -250,11 +288,19 @@ function PlayerRoute() {
       <AudioPlayer
         stop={currentStop}
         onShowStopsList={() => setShowStopsList(true)}
-        onNext={t.handleNext}
-        onPrev={t.handlePrev}
+        onNext={() => {
+          // En la última parada, "siguiente" finaliza el tour
+          if (!t.getNextStopName(currentStop.id)) {
+            setShowTourComplete(true);
+          } else {
+            t.handleNext(currentStop.id);
+          }
+        }}
+        onPrev={() => t.handlePrev(currentStop.id)}
         nextStopName={t.getNextStopName(currentStop.id)}
         onBack={() => navigate('/tour')}
         onShowDetails={() => setShowStopDetail(true)}
+        onStartWalk={() => navigate('/walk')}
       />
 
       <AnimatePresence>
@@ -284,13 +330,13 @@ function PlayerRoute() {
   );
 }
 
-function ChatWrapper() {
+function ChatWrapper({ showButton = true }: { showButton?: boolean }) {
   const isOpen = useChatStore((s) => s.isOpen);
   const toggleChat = useChatStore((s) => s.toggleChat);
 
   return (
     <>
-      <ChatButton />
+      {showButton && <ChatButton />}
       <Drawer.Root open={isOpen} onOpenChange={(o) => { if (!o) toggleChat(); }}>
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-black/60 z-40" />
@@ -381,7 +427,7 @@ function LogoutButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="absolute top-4 right-4 z-40 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        className="absolute top-[42px] right-[92px] z-40 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         aria-label="Cerrar sesión"
       >
         <LogOut className="w-5 h-5" />
@@ -397,7 +443,12 @@ function LogoutButton() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => logout()}>
+            <AlertDialogAction
+              onClick={async () => {
+                await logout();
+                useChatStore.getState().resetLocal();
+              }}
+            >
               Cerrar sesión
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -546,14 +597,22 @@ export default function App() {
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<LandingScreen />} />
               <Route path="/tour" element={<SplashRoute />} />
+              <Route path="/walk" element={<WalkRoute />} />
               <Route path="/login" element={<LoginRoute />} />
               <Route path="/player" element={<PlayerRoute />} />
               <Route path="/tour/:slug" element={<TourRoute />} />
               <Route path="*" element={<NotFoundScreen />} />
             </Routes>
           </AnimatePresence>
-          {!isLandingPage && <ChatWrapper />}
-          {!isLandingPage && <MiniPlayer />}
+          {/* Sin FAB de chat en /login (tapaba el selector de idioma) ni en
+              /walk (el modo caminar ya tiene su propio chip de chat); el
+              drawer sigue montado en /walk para que ese chip lo abra */}
+          {!isLandingPage && location.pathname !== '/login' && (
+            <ChatWrapper showButton={location.pathname !== '/walk'} />
+          )}
+          {/* En /player y /walk el MiniPlayer es redundante: ambas pantallas
+              ya muestran su propio reproductor */}
+          {!isLandingPage && location.pathname !== '/player' && location.pathname !== '/walk' && <MiniPlayer />}
         </div>
       </div>
     </ErrorBoundary>

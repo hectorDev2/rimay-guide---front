@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, MapPin, ChevronDown, Smartphone } from 'lucide-react';
+import { Footprints, MapPin, ChevronDown, Smartphone } from 'lucide-react';
 import { ImageWithFallback } from '../components/atoms/ImageWithFallback';
 import { LanguageSwitcher } from '../components/atoms/LanguageSwitcher';
 import type { TourStopDisplay } from '../components/organisms/TourStopsList';
@@ -10,6 +10,7 @@ interface SplashScreenProps {
   stops: TourStopDisplay[];
   currentStopId: string;
   onSelectStop: (id: string) => void;
+  onStartRoute: () => void;
   onShowLocation: () => void;
   onShowAddToHome: () => void;
 }
@@ -19,6 +20,7 @@ export function SplashScreen({
   stops,
   currentStopId,
   onSelectStop,
+  onStartRoute,
   onShowLocation,
   onShowAddToHome,
 }: SplashScreenProps) {
@@ -41,7 +43,7 @@ export function SplashScreen({
         <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-[#0E0E0E]/40 to-transparent" />
       </div>
 
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 left-4 z-10">
         <LanguageSwitcher />
       </div>
 
@@ -74,10 +76,10 @@ export function SplashScreen({
 
           <div className="space-y-3 mb-6">
             <button
-              onClick={() => onSelectStop(currentStopId)}
+              onClick={onStartRoute}
               className="w-full h-14 rounded-full bg-[#E6FF00] text-[#111111] font-semibold text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(230,255,0,0.3)] active:scale-[0.96] transition-all"
             >
-              <Play className="w-5 h-5" fill="#111111" />
+              <Footprints className="w-5 h-5" />
               {t('splash.start')}
             </button>
 
