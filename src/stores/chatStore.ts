@@ -25,6 +25,7 @@ interface ChatState {
   openChat: () => void;
   closeChat: () => void;
   clearChat: () => void;
+  resetLocal: () => void;
   updateFeedback: (messageId: string, value: 1 | -1 | null) => Promise<void>;
   loadSession: (tourId?: string) => Promise<void>;
 }
@@ -296,6 +297,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
   toggleChat: () => set((s) => ({ isOpen: !s.isOpen })),
   openChat: () => set({ isOpen: true }),
   closeChat: () => set({ isOpen: false }),
+
+  // Reset local sin tocar el historial en la nube: se usa al cerrar sesión
+  // para que el próximo usuario arranque con un chat limpio.
+  resetLocal: () => {
+    set({ messages: [createWelcome()], currentSessionId: null, isOpen: false, streamingContent: '' });
+    saveToLocal([createWelcome()], null);
+    try {
+      localStorage.removeItem('rimay_chat_pending');
+    } catch {}
+  },
 
   clearChat: () => {
     const sessionId = get().currentSessionId;

@@ -6,11 +6,20 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 function buildHistory(messages: { role: 'user' | 'assistant'; content: string }[]): Content[] {
-  return messages.map((m) => ({
+  // La API exige que el historial empiece con rol 'user': descartamos los
+  // mensajes del asistente que quedaron al inicio (p. ej. tras recortar
+  // los últimos N mensajes o mensajes de error previos).
+  const firstUserIdx = messages.findIndex((m) => m.role === 'user');
+  const trimmed = firstUserIdx === -1 ? [] : messages.slice(firstUserIdx);
+  return trimmed.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
 }
+
+// Cadena de fallback: si un modelo está saturado (503) o falla antes de
+// emitir texto, se intenta con el siguiente.
+const MODEL_CHAIN = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash'];
 
 async function* handleOnlineQuery(
   query: string,
@@ -22,30 +31,43 @@ async function* handleOnlineQuery(
     return;
   }
 
-  const model = genAI.getGenerativeModel(
-    { model: 'gemini-3-flash-preview', systemInstruction: buildSystemPrompt(context) },
-    { apiVersion: 'v1beta' },
-  );
+  let lastError: unknown = null;
 
-  const chat = model.startChat({
-    history: buildHistory(history.slice(-10)),
-    generationConfig: {
-      maxOutputTokens: 1024,
-      temperature: 0.7,
-    },
-  });
+  for (const modelName of MODEL_CHAIN) {
+    const model = genAI.getGenerativeModel(
+      { model: modelName, systemInstruction: buildSystemPrompt(context) },
+      { apiVersion: 'v1beta' },
+    );
 
-  try {
-    const result = await chat.sendMessageStream(query);
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
-      if (text) yield text;
+    const chat = model.startChat({
+      history: buildHistory(history.slice(-10)),
+      generationConfig: {
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+      },
+    });
+
+    let yieldedAny = false;
+    try {
+      const result = await chat.sendMessageStream(query);
+      for await (const chunk of result.stream) {
+        const text = chunk.text();
+        if (text) {
+          yieldedAny = true;
+          yield text;
+        }
+      }
+      return;
+    } catch (error) {
+      lastError = error;
+      // Si ya emitió parte de la respuesta, no reintentamos para no duplicar.
+      if (yieldedAny) break;
     }
-  } catch (error) {
-    yield `Lo siento, hubo un error al conectar con la IA. ${
-      error instanceof Error ? error.message : ''
-    }\n\nPuedes seguir usando el chat en modo offline mientras tanto.`;
   }
+
+  yield `Lo siento, la IA está saturada en este momento y no pudo responder. ${
+    lastError instanceof Error ? `(${lastError.message})` : ''
+  }\n\nProbá de nuevo en unos segundos, o usá el chat en modo offline.`;
 }
 
 export { handleOnlineQuery };

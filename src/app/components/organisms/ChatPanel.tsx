@@ -169,12 +169,9 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     if (isOnline) loadSession(tour?.id);
   }, [isOnline]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = input.trim();
+  const send = useCallback(async (content: string) => {
+    const trimmed = content.trim();
     if (!trimmed || isLoading) return;
-
-    setInput('');
 
     const currentStop = tour?.stops[currentStopIndex];
     const currentId = currentStop?.id ?? tour?.stops[0]?.id ?? '';
@@ -187,11 +184,18 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         status: completedIds.includes(s.id) ? 'completed' : 'future',
       })) ?? [],
     });
+  }, [isLoading, tour, currentStopIndex, completedIds, sendMessage]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const content = input;
+    setInput('');
+    await send(content);
   };
 
   const handleQuickQuestion = (question: string) => {
-    setInput(question);
-    inputRef.current?.focus();
+    setInput('');
+    send(question);
   };
 
   const allMessages = streamingContent
@@ -222,10 +226,12 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2">
           <button
             onClick={clearChat}
-            className="p-2 rounded-xl hover:bg-[#1E1E1E] text-[#6E6E6E] hover:text-[#FF4D67] transition-colors"
-            title="Limpiar chat"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#2C2C2C] bg-[#1E1E1E] text-[#A0A0A0] text-xs hover:text-[#FF4D67] hover:border-[#FF4D67]/40 transition-colors active:scale-95"
+            title="Borrar la conversación y empezar de nuevo"
+            aria-label="Limpiar chat"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Limpiar</span>
           </button>
           <button
             onClick={onClose}
